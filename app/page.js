@@ -1,8 +1,12 @@
 'use client'
 import { useState, useCallback } from 'react'
-import { parsearExcel, extrairCidades, extrairAmbientes } from '@/lib/excel'
-import { otimizarRota, gerarLinkGoogleMaps, calcularScore } from '@/lib/rota'
+import { parsearExcel } from "@/lib/excel"
+import { otimizarRota, gerarLinkGoogleMaps } from "@/lib/rota"
 import dynamic from 'next/dynamic'
+
+function extrairCidades(pontos) {
+  return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
+}
 
 const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
 
@@ -397,8 +401,4 @@ function AddMarca({ onAdd }) {
       </div>
     </div>
   )
-}
-
-function extrairCidades(pontos) {
-  return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
 }
