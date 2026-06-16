@@ -1,8 +1,7 @@
 'use client'
 import { useState, useCallback } from 'react'
-import * as XLSX from 'xlsx'
 import { parsearExcel, extrairCidades, extrairAmbientes } from '@/lib/excel'
-import { selecionarPorAmbiente, otimizarRota, gerarLinkGoogleMaps } from '@/lib/rota'
+import { otimizarRota, gerarLinkGoogleMaps, calcularScore } from '@/lib/rota'
 import dynamic from 'next/dynamic'
 
 const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
@@ -39,25 +38,29 @@ export default function Home() {
     }
   }, [])
 
-  const handleCidade = (cidade) => {
-    setCidadeSelecionada(cidade)
-    const todosPontos = marcas.flatMap(m => m.pontos)
-    const ambientes = extrairAmbientes(todosPontos, cidade)
-    setAmbientesDisponiveis(ambientes)
-    setQuantidadesPorAmbiente({})
-  }
-
-  const crossMatch = (cidade) => {
+  // Cross-match: agrupa pontos por cod_ponto contando marcas
+  const crossMatch = useCallback((cidade) => {
     const mapa = {}
     marcas.forEach(marca => {
       const filtrados = marca.pontos.filter(p => !cidade || p.cidade === cidade)
       filtrados.forEach(p => {
         const key = p.cod_ponto
+        if (!key) return
         if (!mapa[key]) mapa[key] = { ...p, marcas: [] }
         if (!mapa[key].marcas.includes(marca.nome)) mapa[key].marcas.push(marca.nome)
       })
     })
     return Object.values(mapa)
+  }, [marcas])
+
+  const handleCidade = (cidade) => {
+    setCidadeSelecionada(cidade)
+    // Usa crossMatch para pegar ambientes reais dos pontos cruzados
+    const todosPontos = marcas.flatMap(m => m.pontos)
+    const filtrados = cidade ? todosPontos.filter(p => p.cidade === cidade) : todosPontos
+    const ambientes = [...new Set(filtrados.map(p => p.ambiente).filter(Boolean))].sort()
+    setAmbientesDisponiveis(ambientes)
+    setQuantidadesPorAmbiente({})
   }
 
   const geocodificar = async (pontos) => {
@@ -65,14 +68,18 @@ export default function Home() {
     let done = 0
     for (const ponto of pontos) {
       setGeocodingProgress(`Geocodificando ${++done} de ${pontos.length}...`)
-      const res = await fetch('/api/geocode', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endereco: ponto.endereco, cidade: ponto.cidade, uf: ponto.uf })
-      })
-      const geo = await res.json()
-      if (geo && geo.lat) resultado.push({ ...ponto, lat: geo.lat, lng: geo.lng })
-      else console.warn('Não geocodificado:', ponto.endereco)
+      try {
+        const res = await fetch('/api/geocode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endereco: ponto.endereco, cidade: ponto.cidade, uf: ponto.uf })
+        })
+        const geo = await res.json()
+        if (geo && geo.lat) resultado.push({ ...ponto, lat: geo.lat, lng: geo.lng })
+        else console.warn('Não geocodificado:', ponto.endereco)
+      } catch (e) {
+        console.warn('Erro geocodificando:', ponto.endereco, e)
+      }
       await new Promise(r => setTimeout(r, 1100))
     }
     return resultado
@@ -80,17 +87,50 @@ export default function Home() {
 
   const gerarRota = async () => {
     setLoading(true)
+    setGeocodingProgress('Preparando pontos...')
+
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
-      const selecionados = selecionarPorAmbiente(todosPontos, quantidadesPorAmbiente, marcas.length)
-      if (selecionados.length === 0) { alert('Nenhum ponto selecionado.'); setLoading(false); return }
+
+      // Seleciona pontos por ambiente com score de sobreposição
+      const selecionados = []
+      for (const [ambiente, quantidade] of Object.entries(quantidadesPorAmbiente)) {
+        const qtd = parseInt(quantidade) || 0
+        if (qtd <= 0) continue
+
+        const doAmbiente = todosPontos
+          .filter(p => p.ambiente === ambiente)
+          .map(p => ({ ...p, score: (p.marcas?.length || 1) / marcas.length }))
+          .sort((a, b) => b.score - a.score)
+          .slice(0, qtd)
+
+        selecionados.push(...doAmbiente)
+      }
+
+      if (selecionados.length === 0) {
+        alert('Nenhum ponto selecionado. Verifique se as quantidades estão preenchidas e se há pontos disponíveis.')
+        setLoading(false)
+        setGeocodingProgress(null)
+        return
+      }
+
       const geocodificados = await geocodificar(selecionados)
-      if (geocodificados.length === 0) { alert('Nenhum ponto geocodificado.'); setLoading(false); return }
+
+      if (geocodificados.length === 0) {
+        alert('Nenhum ponto foi geocodificado. Verifique os endereços.')
+        setLoading(false)
+        setGeocodingProgress(null)
+        return
+      }
+
       const rotaOtimizada = otimizarRota(geocodificados)
       setRotaGerada(rotaOtimizada)
       setLinkMaps(gerarLinkGoogleMaps(rotaOtimizada))
       setEtapa(3)
-    } catch (err) { alert('Erro: ' + err.message) }
+    } catch (err) {
+      alert('Erro ao gerar rota: ' + err.message)
+    }
+
     setLoading(false)
     setGeocodingProgress(null)
   }
@@ -128,6 +168,14 @@ export default function Home() {
   }
 
   const totalPontos = Object.values(quantidadesPorAmbiente).reduce((a, b) => a + (parseInt(b) || 0), 0)
+
+  // Pontos disponíveis por ambiente na cidade selecionada (do crossMatch)
+  const pontosCruzados = cidadeSelecionada ? crossMatch(cidadeSelecionada) : []
+  const disponivelPorAmbiente = {}
+  pontosCruzados.forEach(p => {
+    if (!disponivelPorAmbiente[p.ambiente]) disponivelPorAmbiente[p.ambiente] = 0
+    disponivelPorAmbiente[p.ambiente]++
+  })
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -190,7 +238,14 @@ export default function Home() {
                 <p className="font-medium text-sm text-green-800">{marca.nome}</p>
                 <p className="text-xs text-green-600">{marca.pontos.length} pontos carregados</p>
               </div>
-              <button onClick={() => setMarcas(prev => prev.filter(m => m.nome !== marca.nome))} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+              <button onClick={() => {
+                setMarcas(prev => {
+                  const novas = prev.filter(m => m.nome !== marca.nome)
+                  const todosPontos = novas.flatMap(m => m.pontos)
+                  setCidadesDisponiveis(extrairCidades ? [...new Set(todosPontos.map(p => p.cidade).filter(Boolean))].sort() : [])
+                  return novas
+                })
+              }} className="text-xs text-red-400 hover:text-red-600">Remover</button>
             </div>
           ))}
           <AddMarca onAdd={handleUpload} />
@@ -210,7 +265,8 @@ export default function Home() {
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
-            <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">Selecione uma cidade</option>
               {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -221,7 +277,7 @@ export default function Home() {
               <label className="block text-sm font-medium text-gray-700 mb-3">Pontos por ativo</label>
               <div className="space-y-3">
                 {ambientesDisponiveis.map(amb => {
-                  const disponiveis = crossMatch(cidadeSelecionada).filter(p => p.ambiente === amb).length
+                  const disponiveis = disponivelPorAmbiente[amb] || 0
                   return (
                     <div key={amb} className="flex items-center gap-4">
                       <div className="flex-1">
@@ -245,7 +301,8 @@ export default function Home() {
 
           <div className="flex gap-3">
             <button onClick={() => setEtapa(1)} className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition">← Voltar</button>
-            <button onClick={gerarRota} disabled={!cidadeSelecionada || totalPontos === 0 || loading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={gerarRota} disabled={!cidadeSelecionada || totalPontos === 0 || loading}
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? (geocodingProgress || 'Gerando...') : 'Gerar rota →'}
             </button>
           </div>
@@ -262,16 +319,26 @@ export default function Home() {
                 <p className="text-sm text-gray-500">{cidadeSelecionada} · {rotaGerada.length} pontos</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }} className="text-sm border px-3 py-1.5 rounded-lg hover:bg-gray-50">Ajustar</button>
-                <button onClick={salvarRota} disabled={rotaSalva} className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">{rotaSalva ? 'Salva ✓' : 'Salvar'}</button>
+                <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }}
+                  className="text-sm border px-3 py-1.5 rounded-lg hover:bg-gray-50">Ajustar</button>
+                <button onClick={salvarRota} disabled={rotaSalva}
+                  className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  {rotaSalva ? 'Salva ✓' : 'Salvar'}
+                </button>
               </div>
             </div>
             <div className="rounded-lg overflow-hidden border mb-4">
               <Mapa pontos={rotaGerada} />
             </div>
             <div className="flex gap-3">
-              <a href={linkMaps} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium text-center hover:bg-green-700 transition">🗺️ Abrir no Google Maps</a>
-              <button onClick={exportarCSV} className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition">📥 Exportar CSV</button>
+              <a href={linkMaps} target="_blank" rel="noopener noreferrer"
+                className="flex-1 bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium text-center hover:bg-green-700 transition">
+                🗺️ Abrir no Google Maps
+              </a>
+              <button onClick={exportarCSV}
+                className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
+                📥 Exportar CSV
+              </button>
             </div>
           </div>
 
@@ -294,7 +361,8 @@ export default function Home() {
             </div>
           </div>
 
-          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setRotaSalva(false) }} className="w-full text-sm text-gray-500 hover:text-gray-700 py-2">
+          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setRotaSalva(false) }}
+            className="w-full text-sm text-gray-500 hover:text-gray-700 py-2">
             + Nova rota do zero
           </button>
         </div>
@@ -329,4 +397,8 @@ function AddMarca({ onAdd }) {
       </div>
     </div>
   )
+}
+
+function extrairCidades(pontos) {
+  return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
 }
