@@ -1,14 +1,14 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'OOH Rotas',
+  title: 'Descomplicando Rotas Funway',
   description: 'Sistema de rotas para campanhas OOH',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
-      <body className="bg-gray-50 min-h-screen">{children}</body>
+      <body>{children}</body>
     </html>
   )
 }
