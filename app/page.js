@@ -10,12 +10,16 @@ function extrairCidades(pontos) {
   return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
 }
 
+const CORES_MARCAS = [
+  '#6366f1', '#f59e0b', '#10b981', '#ef4444',
+  '#8b5cf6', '#06b6d4', '#f97316', '#ec4899'
+]
+
 export default function Home() {
   const [marcas, setMarcas] = useState([])
   const [cidadeSelecionada, setCidadeSelecionada] = useState('')
   const [cidadesDisponiveis, setCidadesDisponiveis] = useState([])
   const [ambientesDisponiveis, setAmbientesDisponiveis] = useState([])
-  // { "Ambiente X": { "Marca A": 2, "Marca B": 1 } }
   const [selecao, setSelecao] = useState({})
   const [rotaGerada, setRotaGerada] = useState([])
   const [linkMaps, setLinkMaps] = useState('')
@@ -26,6 +30,11 @@ export default function Home() {
   const [historico, setHistorico] = useState([])
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
 
+  const corMarca = (nome) => {
+    const idx = marcas.findIndex(m => m.nome === nome)
+    return CORES_MARCAS[idx % CORES_MARCAS.length]
+  }
+
   const handleUpload = useCallback(async (file, nomeMarca) => {
     const buffer = await file.arrayBuffer()
     try {
@@ -33,8 +42,7 @@ export default function Home() {
       setMarcas(prev => {
         const semEssa = prev.filter(m => m.nome !== nomeMarca)
         const novas = [...semEssa, { nome: nomeMarca, pontos }]
-        const todosPontos = novas.flatMap(m => m.pontos)
-        setCidadesDisponiveis(extrairCidades(todosPontos))
+        setCidadesDisponiveis(extrairCidades(novas.flatMap(m => m.pontos)))
         return novas
       })
     } catch (err) {
@@ -42,7 +50,6 @@ export default function Home() {
     }
   }, [])
 
-  // Cross-match: agrupa por cod_ponto somando marcas
   const crossMatch = useCallback((cidade) => {
     const mapa = {}
     marcas.forEach(marca => {
@@ -70,16 +77,11 @@ export default function Home() {
   const setQtd = (ambiente, marca, valor) => {
     setSelecao(prev => ({
       ...prev,
-      [ambiente]: {
-        ...(prev[ambiente] || {}),
-        [marca]: parseInt(valor) || 0
-      }
+      [ambiente]: { ...(prev[ambiente] || {}), [marca]: parseInt(valor) || 0 }
     }))
   }
 
-  // Conta pontos disponíveis por ambiente+marca (no crossMatch)
   const pontosCruzados = cidadeSelecionada ? crossMatch(cidadeSelecionada) : []
-
   const disponivelPorAmbienteMarca = {}
   pontosCruzados.forEach(p => {
     if (!disponivelPorAmbienteMarca[p.ambiente]) disponivelPorAmbienteMarca[p.ambiente] = {}
@@ -88,7 +90,6 @@ export default function Home() {
     })
   })
 
-  // Total de pontos selecionados (após deduplicação estimada)
   const totalPontos = Object.values(selecao).reduce((total, porMarca) =>
     total + Object.values(porMarca).reduce((a, b) => a + (parseInt(b) || 0), 0), 0)
 
@@ -105,10 +106,7 @@ export default function Home() {
         })
         const geo = await res.json()
         if (geo && geo.lat) resultado.push({ ...ponto, lat: geo.lat, lng: geo.lng })
-        else console.warn('Não geocodificado:', ponto.endereco)
-      } catch (e) {
-        console.warn('Erro geocodificando:', ponto.endereco)
-      }
+      } catch (e) { console.warn('Erro geocodificando:', ponto.endereco) }
       await new Promise(r => setTimeout(r, 1100))
     }
     return resultado
@@ -117,77 +115,42 @@ export default function Home() {
   const gerarRota = async () => {
     setLoading(true)
     setGeocodingProgress('Preparando pontos...')
-
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
-      // mapa de pontos por marca para lookup rápido
-      const pontosPorMarca = {}
-      marcas.forEach(marca => {
-        pontosPorMarca[marca.nome] = {}
-        marca.pontos
-          .filter(p => !cidadeSelecionada || p.cidade === cidadeSelecionada)
-          .forEach(p => { pontosPorMarca[marca.nome][p.cod_ponto] = p })
-      })
-
-      // Acumula selecionados por cod_ponto para deduplicar
-      // key: cod_ponto, value: ponto com marcas acumuladas
       const acumulado = {}
-
       for (const [ambiente, porMarca] of Object.entries(selecao)) {
         for (const [nomeMarca, quantidade] of Object.entries(porMarca)) {
           const qtd = parseInt(quantidade) || 0
           if (qtd <= 0) continue
-
-          // Pontos desta marca neste ambiente, ordenados por sobreposição (mais marcas = melhor)
           const candidatos = todosPontos
             .filter(p => p.ambiente === ambiente && p.marcas.includes(nomeMarca))
             .sort((a, b) => b.marcas.length - a.marcas.length)
-
           let adicionados = 0
           for (const p of candidatos) {
             if (adicionados >= qtd) break
             const key = p.cod_ponto
-            if (!acumulado[key]) {
-              acumulado[key] = { ...p }
-            } else {
-              // Ponto já existe — garante que a marca atual está listada
-              if (!acumulado[key].marcas.includes(nomeMarca)) {
-                acumulado[key].marcas.push(nomeMarca)
-              }
-            }
+            if (!acumulado[key]) acumulado[key] = { ...p }
+            else if (!acumulado[key].marcas.includes(nomeMarca)) acumulado[key].marcas.push(nomeMarca)
             adicionados++
           }
         }
       }
-
       const selecionados = Object.values(acumulado)
-
       if (selecionados.length === 0) {
-        alert('Nenhum ponto selecionado. Verifique se as quantidades estão preenchidas.')
-        setLoading(false)
-        setGeocodingProgress(null)
-        return
+        alert('Nenhum ponto selecionado.')
+        setLoading(false); setGeocodingProgress(null); return
       }
-
       const geocodificados = await geocodificar(selecionados)
-
       if (geocodificados.length === 0) {
         alert('Nenhum ponto foi geocodificado.')
-        setLoading(false)
-        setGeocodingProgress(null)
-        return
+        setLoading(false); setGeocodingProgress(null); return
       }
-
       const rotaOtimizada = otimizarRota(geocodificados)
       setRotaGerada(rotaOtimizada)
       setLinkMaps(gerarLinkGoogleMaps(rotaOtimizada))
       setEtapa(3)
-    } catch (err) {
-      alert('Erro ao gerar rota: ' + err.message)
-    }
-
-    setLoading(false)
-    setGeocodingProgress(null)
+    } catch (err) { alert('Erro: ' + err.message) }
+    setLoading(false); setGeocodingProgress(null)
   }
 
   const salvarRota = async () => {
@@ -222,215 +185,277 @@ export default function Home() {
     a.click()
   }
 
-  const nomesAmbientesComSelecao = ambientesDisponiveis.filter(amb =>
-    Object.values(selecao[amb] || {}).some(v => (parseInt(v) || 0) > 0)
-  )
-
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">OOH Rotas</h1>
-          <p className="text-gray-500 text-sm">Sistema de rotas para campanhas OOH</p>
+    <div style={{ minHeight: '100vh', backgroundColor: '#0f1117', color: '#e2e8f0' }}>
+      {/* Header */}
+      <div style={{ backgroundColor: '#1a1d27', borderBottom: '1px solid #2d3148', padding: '16px 32px' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🗺️</div>
+            <h1 style={{ fontSize: '16px', fontWeight: '600', color: '#f1f5f9', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
+              Descomplicando Rotas Funway
+            </h1>
+          </div>
+          <button onClick={carregarHistorico}
+            style={{ fontSize: '13px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
+            Ver histórico
+          </button>
         </div>
-        <button onClick={carregarHistorico} className="text-sm text-blue-600 hover:underline">Ver histórico</button>
       </div>
 
-      {mostrarHistorico && (
-        <div className="mb-6 bg-white rounded-xl border p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h2 className="font-semibold">Rotas salvas</h2>
-            <button onClick={() => setMostrarHistorico(false)} className="text-gray-400">✕</button>
-          </div>
-          {historico.length === 0 ? <p className="text-gray-400 text-sm">Nenhuma rota salva.</p> : (
-            <div className="space-y-2">
-              {historico.map(r => (
-                <div key={r.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-sm">{r.nome}</p>
-                    <p className="text-xs text-gray-400">{r.cidade} · {new Date(r.criado_em).toLocaleDateString('pt-BR')}</p>
-                  </div>
-                  <button onClick={() => {
-                    setRotaGerada(r.pontos_json)
-                    setLinkMaps(gerarLinkGoogleMaps(r.pontos_json))
-                    setCidadeSelecionada(r.cidade)
-                    setEtapa(3)
-                    setMostrarHistorico(false)
-                  }} className="text-xs text-blue-600 hover:underline">Abrir</button>
-                </div>
-              ))}
+      <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+
+        {/* Histórico */}
+        {mostrarHistorico && (
+          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>Rotas salvas</h2>
+              <button onClick={() => setMostrarHistorico(false)} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>✕</button>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Steps */}
-      <div className="flex items-center gap-2 mb-8">
-        {[1, 2, 3].map(s => (
-          <div key={s} className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${etapa >= s ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>{s}</div>
-            <span className={`text-sm ${etapa >= s ? 'text-gray-700' : 'text-gray-400'}`}>{s === 1 ? 'Upload' : s === 2 ? 'Parâmetros' : 'Rota'}</span>
-            {s < 3 && <div className="w-8 h-px bg-gray-200" />}
-          </div>
-        ))}
-      </div>
-
-      {/* ETAPA 1 */}
-      {etapa === 1 && (
-        <div className="bg-white rounded-xl border p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">Upload das listas de pontos</h2>
-          <p className="text-sm text-gray-500 mb-6">Suba um Excel por marca.</p>
-          {marcas.map(marca => (
-            <div key={marca.nome} className="flex items-center gap-3 mb-3 p-3 bg-green-50 rounded-lg border border-green-200">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <div className="flex-1">
-                <p className="font-medium text-sm text-green-800">{marca.nome}</p>
-                <p className="text-xs text-green-600">{marca.pontos.length} pontos carregados</p>
+            {historico.length === 0 ? (
+              <p style={{ color: '#475569', fontSize: '13px' }}>Nenhuma rota salva ainda.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {historico.map(r => (
+                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148' }}>
+                    <div>
+                      <p style={{ fontSize: '13px', fontWeight: '500', color: '#e2e8f0' }}>{r.nome}</p>
+                      <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{r.cidade} · {new Date(r.criado_em).toLocaleDateString('pt-BR')}</p>
+                    </div>
+                    <button onClick={() => {
+                      setRotaGerada(r.pontos_json)
+                      setLinkMaps(gerarLinkGoogleMaps(r.pontos_json))
+                      setCidadeSelecionada(r.cidade)
+                      setEtapa(3)
+                      setMostrarHistorico(false)
+                    }} style={{ fontSize: '12px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>Abrir →</button>
+                  </div>
+                ))}
               </div>
-              <button onClick={() => setMarcas(prev => {
-                const novas = prev.filter(m => m.nome !== marca.nome)
-                setCidadesDisponiveis(extrairCidades(novas.flatMap(m => m.pontos)))
-                return novas
-              })} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+            )}
+          </div>
+        )}
+
+        {/* Steps */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '32px' }}>
+          {[{ n: 1, label: 'Upload' }, { n: 2, label: 'Parâmetros' }, { n: 3, label: 'Rota' }].map(({ n, label }, i) => (
+            <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', fontSize: '12px', fontWeight: '700',
+                backgroundColor: etapa >= n ? '#6366f1' : '#1e2235',
+                color: etapa >= n ? '#fff' : '#475569',
+                border: etapa >= n ? 'none' : '1px solid #2d3148'
+              }}>{n}</div>
+              <span style={{ fontSize: '13px', fontWeight: '500', color: etapa >= n ? '#e2e8f0' : '#475569' }}>{label}</span>
+              {i < 2 && <div style={{ width: '32px', height: '1px', backgroundColor: '#2d3148' }} />}
             </div>
           ))}
-          <AddMarca onAdd={handleUpload} />
-          {marcas.length > 0 && (
-            <button onClick={() => setEtapa(2)} className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition">
-              Continuar com {marcas.length} marca{marcas.length > 1 ? 's' : ''} →
-            </button>
-          )}
         </div>
-      )}
 
-      {/* ETAPA 2 */}
-      {etapa === 2 && (
-        <div className="bg-white rounded-xl border p-6">
-          <h2 className="font-semibold text-gray-800 mb-1">Parâmetros da rota</h2>
-          <p className="text-sm text-gray-500 mb-6">Selecione a cidade e quantos pontos de cada marca e ativo deseja na rota.</p>
+        {/* ETAPA 1 — Upload */}
+        {etapa === 1 && (
+          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '28px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9', marginBottom: '6px' }}>Upload das listas de pontos</h2>
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>Suba um Excel por marca. Você pode adicionar quantas marcas quiser.</p>
 
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
-            <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">Selecione uma cidade</option>
-              {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {cidadeSelecionada && ambientesDisponiveis.length > 0 && (
-            <div className="mb-6 space-y-6">
-              {ambientesDisponiveis.map(amb => (
-                <div key={amb} className="border rounded-xl p-4">
-                  <p className="font-medium text-gray-800 mb-3">{amb}</p>
-                  <div className="space-y-3">
-                    {marcas.map(marca => {
-                      const disponiveis = disponivelPorAmbienteMarca[amb]?.[marca.nome] || 0
-                      if (disponiveis === 0) return (
-                        <div key={marca.nome} className="flex items-center gap-4 opacity-40">
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-500">{marca.nome}</p>
-                            <p className="text-xs text-gray-400">Sem pontos neste ativo</p>
-                          </div>
-                          <div className="w-20 text-center text-xs text-gray-300">—</div>
-                        </div>
-                      )
-                      return (
-                        <div key={marca.nome} className="flex items-center gap-4">
-                          <div className="flex-1">
-                            <p className="text-sm text-gray-700">{marca.nome}</p>
-                            <p className="text-xs text-gray-400">{disponiveis} pontos disponíveis</p>
-                          </div>
-                          <input
-                            type="number" min="0" max={disponiveis}
-                            value={selecao[amb]?.[marca.nome] || ''}
-                            onChange={e => setQtd(amb, marca.nome, e.target.value)}
-                            placeholder="0"
-                            className="w-20 border rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
+            {marcas.map((marca, idx) => (
+              <div key={marca.nome} style={{
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
+                backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148',
+                marginBottom: '10px'
+              }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: CORES_MARCAS[idx % CORES_MARCAS.length], flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#e2e8f0' }}>{marca.nome}</p>
+                  <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{marca.pontos.length} pontos carregados</p>
                 </div>
-              ))}
+                <button onClick={() => setMarcas(prev => {
+                  const novas = prev.filter(m => m.nome !== marca.nome)
+                  setCidadesDisponiveis(extrairCidades(novas.flatMap(m => m.pontos)))
+                  return novas
+                })} style={{ fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}>Remover</button>
+              </div>
+            ))}
 
-              {totalPontos > 0 && (
-                <p className="text-sm text-blue-600 font-medium">
-                  Total estimado: {totalPontos} ponto{totalPontos > 1 ? 's' : ''} (pode ser menor após deduplicação de pontos compartilhados entre marcas)
-                </p>
-              )}
-            </div>
-          )}
+            <AddMarca onAdd={handleUpload} />
 
-          <div className="flex gap-3">
-            <button onClick={() => setEtapa(1)} className="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-50 transition">← Voltar</button>
-            <button onClick={gerarRota} disabled={!cidadeSelecionada || totalPontos === 0 || loading}
-              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
-              {loading ? (geocodingProgress || 'Gerando...') : 'Gerar rota →'}
-            </button>
+            {marcas.length > 0 && (
+              <button onClick={() => setEtapa(2)} style={{
+                marginTop: '24px', width: '100%', padding: '14px',
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                color: 'white', border: 'none', borderRadius: '10px',
+                fontSize: '14px', fontWeight: '600', cursor: 'pointer'
+              }}>
+                Continuar com {marcas.length} marca{marcas.length > 1 ? 's' : ''} →
+              </button>
+            )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ETAPA 3 */}
-      {etapa === 3 && (
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl border p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-semibold text-gray-800">Rota gerada</h2>
-                <p className="text-sm text-gray-500">{cidadeSelecionada} · {rotaGerada.length} ponto{rotaGerada.length !== 1 ? 's' : ''}</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }}
-                  className="text-sm border px-3 py-1.5 rounded-lg hover:bg-gray-50">Ajustar</button>
-                <button onClick={salvarRota} disabled={rotaSalva}
-                  className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  {rotaSalva ? 'Salva ✓' : 'Salvar'}
-                </button>
-              </div>
+        {/* ETAPA 2 — Parâmetros */}
+        {etapa === 2 && (
+          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '28px' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9', marginBottom: '6px' }}>Parâmetros da rota</h2>
+            <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>Selecione a cidade e quantos pontos de cada marca e ativo deseja na rota.</p>
+
+            {/* Cidade */}
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cidade</label>
+              <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)} style={{
+                width: '100%', padding: '10px 14px', backgroundColor: '#0f1117',
+                border: '1px solid #2d3148', borderRadius: '8px', color: '#e2e8f0',
+                fontSize: '13px', cursor: 'pointer', outline: 'none'
+              }}>
+                <option value="">Selecione uma cidade</option>
+                {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
-            <div className="rounded-lg overflow-hidden border mb-4">
-              <Mapa pontos={rotaGerada} />
-            </div>
-            <div className="flex gap-3">
-              <a href={linkMaps} target="_blank" rel="noopener noreferrer"
-                className="flex-1 bg-green-600 text-white py-2.5 rounded-lg text-sm font-medium text-center hover:bg-green-700 transition">
-                🗺️ Abrir no Google Maps
-              </a>
-              <button onClick={exportarCSV}
-                className="flex-1 border border-gray-300 text-gray-700 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-                📥 Exportar CSV
+
+            {/* Ambientes × Marcas */}
+            {cidadeSelecionada && ambientesDisponiveis.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+                {ambientesDisponiveis.map(amb => (
+                  <div key={amb} style={{ backgroundColor: '#0f1117', border: '1px solid #2d3148', borderRadius: '12px', padding: '16px' }}>
+                    <p style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{amb}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {marcas.map((marca, idx) => {
+                        const disponiveis = disponivelPorAmbienteMarca[amb]?.[marca.nome] || 0
+                        const cor = CORES_MARCAS[idx % CORES_MARCAS.length]
+                        return (
+                          <div key={marca.nome} style={{ display: 'flex', alignItems: 'center', gap: '12px', opacity: disponiveis === 0 ? 0.3 : 1 }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cor, flexShrink: 0 }} />
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '13px', color: '#e2e8f0', fontWeight: '500' }}>{marca.nome}</p>
+                              <p style={{ fontSize: '11px', color: '#475569' }}>{disponiveis} disponíveis</p>
+                            </div>
+                            <input
+                              type="number" min="0" max={disponiveis}
+                              value={selecao[amb]?.[marca.nome] || ''}
+                              onChange={e => setQtd(amb, marca.nome, e.target.value)}
+                              disabled={disponiveis === 0}
+                              placeholder="0"
+                              style={{
+                                width: '64px', padding: '6px 10px', textAlign: 'center',
+                                backgroundColor: '#1a1d27', border: `1px solid ${selecao[amb]?.[marca.nome] > 0 ? cor : '#2d3148'}`,
+                                borderRadius: '8px', color: '#e2e8f0', fontSize: '13px',
+                                outline: 'none', fontWeight: '600'
+                              }}
+                            />
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {totalPontos > 0 && (
+                  <div style={{ padding: '12px 16px', backgroundColor: '#1e1b4b', borderRadius: '10px', border: '1px solid #4338ca' }}>
+                    <p style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '500' }}>
+                      Total estimado: <strong style={{ color: '#818cf8' }}>{totalPontos} ponto{totalPontos > 1 ? 's' : ''}</strong>
+                      <span style={{ color: '#6366f1', marginLeft: '4px' }}>(pode ser menor após deduplicação)</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={() => setEtapa(1)} style={{
+                flex: 1, padding: '14px', backgroundColor: 'transparent',
+                border: '1px solid #2d3148', borderRadius: '10px', color: '#94a3b8',
+                fontSize: '14px', fontWeight: '500', cursor: 'pointer'
+              }}>← Voltar</button>
+              <button onClick={gerarRota} disabled={!cidadeSelecionada || totalPontos === 0 || loading} style={{
+                flex: 1, padding: '14px',
+                background: (!cidadeSelecionada || totalPontos === 0 || loading) ? '#1e2235' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                border: 'none', borderRadius: '10px', color: (!cidadeSelecionada || totalPontos === 0 || loading) ? '#475569' : 'white',
+                fontSize: '14px', fontWeight: '600', cursor: (!cidadeSelecionada || totalPontos === 0 || loading) ? 'not-allowed' : 'pointer'
+              }}>
+                {loading ? (geocodingProgress || 'Gerando...') : 'Gerar rota →'}
               </button>
             </div>
           </div>
+        )}
 
-          <div className="bg-white rounded-xl border p-4">
-            <h3 className="font-medium text-gray-800 mb-3">Pontos da rota</h3>
-            <div className="space-y-2">
-              {rotaGerada.map((p, i) => (
-                <div key={i} className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg">
-                  <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{i + 1}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{p.nome_ponto || p.endereco}</p>
-                    <p className="text-xs text-gray-500 truncate">{p.endereco}</p>
-                    <div className="flex gap-2 mt-1 flex-wrap">
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{p.ambiente}</span>
-                      {p.marcas?.map(m => <span key={m} className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">{m}</span>)}
+        {/* ETAPA 3 — Resultado */}
+        {etapa === 3 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Card do mapa */}
+            <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <div>
+                  <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9' }}>Rota gerada</h2>
+                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{cidadeSelecionada} · {rotaGerada.length} pontos</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }} style={{
+                    padding: '7px 14px', backgroundColor: 'transparent', border: '1px solid #2d3148',
+                    borderRadius: '8px', color: '#94a3b8', fontSize: '12px', cursor: 'pointer', fontWeight: '500'
+                  }}>Ajustar</button>
+                  <button onClick={salvarRota} disabled={rotaSalva} style={{
+                    padding: '7px 14px', background: rotaSalva ? '#1e2235' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    border: 'none', borderRadius: '8px', color: rotaSalva ? '#475569' : 'white',
+                    fontSize: '12px', cursor: rotaSalva ? 'default' : 'pointer', fontWeight: '600'
+                  }}>{rotaSalva ? 'Salva ✓' : 'Salvar'}</button>
+                </div>
+              </div>
+
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #2d3148', marginBottom: '16px', height: '460px' }}>
+                <Mapa pontos={rotaGerada} />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <a href={linkMaps} target="_blank" rel="noopener noreferrer" style={{
+                  flex: 1, padding: '12px', backgroundColor: '#064e3b', border: '1px solid #065f46',
+                  borderRadius: '10px', color: '#34d399', fontSize: '13px', fontWeight: '600',
+                  textAlign: 'center', textDecoration: 'none', display: 'block'
+                }}>🗺️ Abrir no Google Maps</a>
+                <button onClick={exportarCSV} style={{
+                  flex: 1, padding: '12px', backgroundColor: 'transparent', border: '1px solid #2d3148',
+                  borderRadius: '10px', color: '#94a3b8', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+                }}>📥 Exportar CSV</button>
+              </div>
+            </div>
+
+            {/* Lista de pontos */}
+            <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px' }}>
+              <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Pontos da rota</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {rotaGerada.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px 14px', backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148' }}>
+                    <div style={{
+                      width: '24px', height: '24px', borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      color: 'white', fontSize: '11px', fontWeight: '700',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    }}>{i + 1}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: '13px', fontWeight: '600', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome_ponto || p.endereco}</p>
+                      <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.endereco}</p>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', backgroundColor: '#1e1b4b', color: '#a5b4fc', padding: '2px 8px', borderRadius: '20px', fontWeight: '500' }}>{p.ambiente}</span>
+                        {p.marcas?.map((m, mi) => (
+                          <span key={m} style={{
+                            fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: '500',
+                            backgroundColor: `${CORES_MARCAS[marcas.findIndex(mk => mk.nome === m) % CORES_MARCAS.length]}22`,
+                            color: CORES_MARCAS[marcas.findIndex(mk => mk.nome === m) % CORES_MARCAS.length]
+                          }}>{m}</span>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
-            className="w-full text-sm text-gray-500 hover:text-gray-700 py-2">
-            + Nova rota do zero
-          </button>
-        </div>
-      )}
+            <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
+              style={{ color: '#475569', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '8px' }}>
+              + Nova rota do zero
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -447,17 +472,29 @@ function AddMarca({ onAdd }) {
   }
 
   return (
-    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4">
-      <p className="text-sm font-medium text-gray-700 mb-3">Adicionar marca</p>
-      <div className="flex gap-3 flex-wrap">
+    <div style={{ border: '1px dashed #2d3148', borderRadius: '12px', padding: '16px', marginTop: '4px' }}>
+      <p style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Adicionar marca</p>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <input type="text" placeholder="Nome da marca (ex: Guaraná)" value={nome} onChange={e => setNome(e.target.value)}
-          className="flex-1 min-w-40 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <label className="flex-1 min-w-40 cursor-pointer border rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-50 flex items-center gap-2">
+          style={{
+            flex: 1, minWidth: '160px', padding: '9px 14px', backgroundColor: '#0f1117',
+            border: '1px solid #2d3148', borderRadius: '8px', color: '#e2e8f0',
+            fontSize: '13px', outline: 'none'
+          }} />
+        <label style={{
+          flex: 1, minWidth: '160px', cursor: 'pointer', padding: '9px 14px',
+          backgroundColor: '#0f1117', border: '1px solid #2d3148', borderRadius: '8px',
+          color: file ? '#a5b4fc' : '#475569', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'
+        }}>
           <span>📎</span>
-          <span className="truncate">{file ? file.name : 'Selecionar Excel'}</span>
-          <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={e => setFile(e.target.files[0])} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file ? file.name : 'Selecionar Excel'}</span>
+          <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0])} />
         </label>
-        <button onClick={handleSubmit} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition">Adicionar</button>
+        <button onClick={handleSubmit} style={{
+          padding: '9px 20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px',
+          fontWeight: '600', cursor: 'pointer'
+        }}>Adicionar</button>
       </div>
     </div>
   )
