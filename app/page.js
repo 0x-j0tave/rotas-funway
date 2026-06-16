@@ -118,56 +118,136 @@ export default function Home() {
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
 
-      // Para cada (marca, ambiente, quantidade), seleciona os melhores pontos
-      // independentemente — priorizando pontos com mais marcas (maior sobreposição).
-      // Pontos compartilhados entram 1x na rota com todas as marcas no label.
-      // Pontos exclusivos de uma marca entram normalmente para completar a cota.
-      const acumulado = {}
+      // ALGORITMO DE SELEÇÃO EM 2 FASES:
+      //
+      // Fase 1 — Pontos compartilhados (maior sobreposição primeiro)
+      //   Para cada ambiente, identifica quais marcas têm cotas e qual é a menor.
+      //   Seleciona até (menor cota) pontos que atendem TODAS as marcas com cota > 0.
+      //   Esses pontos entram na rota com label de todas as marcas.
+      //
+      // Fase 2 — Complemento por proximidade
+      //   Para cada marca que ainda tem vagas, completa com pontos exclusivos
+      //   priorizando os mais próximos do centroide dos pontos já selecionados.
+
+      const acumulado = {} // cod_ponto → ponto enriquecido
 
       for (const [ambiente, porMarca] of Object.entries(selecao)) {
-        for (const [nomeMarca, quantidade] of Object.entries(porMarca)) {
-          const qtd = parseInt(quantidade) || 0
-          if (qtd <= 0) continue
+        const marcasComCota = Object.entries(porMarca)
+          .filter(([, q]) => (parseInt(q) || 0) > 0)
+          .map(([m, q]) => ({ nome: m, qtd: parseInt(q) }))
 
-          // Busca pontos desta marca neste ambiente, ordenados por sobreposição
+        if (marcasComCota.length === 0) continue
+
+        const cotaMinima = Math.min(...marcasComCota.map(m => m.qtd))
+
+        // ── FASE 1: pontos que aparecem em TODAS as marcas com cota ──
+        const nomesMarcas = marcasComCota.map(m => m.nome)
+        const compartilhados = todosPontos
+          .filter(p =>
+            p.ambiente === ambiente &&
+            nomesMarcas.every(nm => p.marcas.includes(nm))
+          )
+          .sort((a, b) => b.marcas.length - a.marcas.length)
+          .slice(0, cotaMinima)
+
+        compartilhados.forEach(p => {
+          acumulado[p.cod_ponto] = { ...p }
+        })
+
+        // ── FASE 2: completa cota restante de cada marca por proximidade ──
+        // Calcula centroide dos pontos já selecionados (para proximidade)
+        // Como ainda não temos coords aqui, usamos posição na lista como proxy —
+        // a ordenação real por distância acontece depois da geocodificação.
+        // Por enquanto, completamos com pontos exclusivos da marca ordenados
+        // por sobreposição com outras marcas (qualidade), não por coords.
+
+        for (const { nome: nomeMarca, qtd } of marcasComCota) {
+          const jaUsados = compartilhados.filter(p => p.marcas.includes(nomeMarca)).length
+          const faltam = qtd - jaUsados
+          if (faltam <= 0) continue
+
+          // Pontos desta marca neste ambiente que ainda não estão na rota
           const candidatos = todosPontos
-            .filter(p => p.ambiente === ambiente && p.marcas.includes(nomeMarca))
+            .filter(p =>
+              p.ambiente === ambiente &&
+              p.marcas.includes(nomeMarca) &&
+              !acumulado[p.cod_ponto]
+            )
             .sort((a, b) => b.marcas.length - a.marcas.length)
 
-          // Separa: pontos já acumulados (de outras marcas) vs novos
-          // Primeiro tenta usar pontos já na rota (deduplica), depois adiciona novos
-          const jaNaRota = candidatos.filter(p => acumulado[p.cod_ponto])
-          const novos = candidatos.filter(p => !acumulado[p.cod_ponto])
-
           let adicionados = 0
-
-          // Conta pontos já na rota que satisfazem esta cota
-          for (const p of jaNaRota) {
-            if (adicionados >= qtd) break
-            if (!acumulado[p.cod_ponto].marcas.includes(nomeMarca)) {
-              acumulado[p.cod_ponto].marcas.push(nomeMarca)
-            }
-            adicionados++
-          }
-
-          // Completa com pontos novos (exclusivos desta marca ou não usados ainda)
-          for (const p of novos) {
-            if (adicionados >= qtd) break
+          for (const p of candidatos) {
+            if (adicionados >= faltam) break
             acumulado[p.cod_ponto] = { ...p }
             adicionados++
           }
         }
       }
-      const selecionados = Object.values(acumulado)
-      if (selecionados.length === 0) {
+      const fase1 = Object.values(acumulado)
+      if (fase1.length === 0) {
         alert('Nenhum ponto selecionado.')
         setLoading(false); setGeocodingProgress(null); return
       }
-      const geocodificados = await geocodificar(selecionados)
-      if (geocodificados.length === 0) {
+
+      // Geocodifica pontos da Fase 1
+      const geocFase1 = await geocodificar(fase1)
+      if (geocFase1.length === 0) {
         alert('Nenhum ponto foi geocodificado.')
         setLoading(false); setGeocodingProgress(null); return
       }
+
+      // Calcula centroide dos pontos da Fase 1
+      const centroide = {
+        lat: geocFase1.reduce((s, p) => s + p.lat, 0) / geocFase1.length,
+        lng: geocFase1.reduce((s, p) => s + p.lng, 0) / geocFase1.length
+      }
+
+      // FASE 2 com coords: reseleciona complementos por proximidade ao centroide
+      // Para cada marca com vagas restantes, ordena candidatos por distância ao centroide
+      const codsFase1 = new Set(geocFase1.map(p => p.cod_ponto))
+      const acumuladoFinal = {}
+      geocFase1.forEach(p => { acumuladoFinal[p.cod_ponto] = p })
+
+      for (const [ambiente, porMarca] of Object.entries(selecao)) {
+        const marcasComCota = Object.entries(porMarca)
+          .filter(([, q]) => (parseInt(q) || 0) > 0)
+          .map(([m, q]) => ({ nome: m, qtd: parseInt(q) }))
+
+        for (const { nome: nomeMarca, qtd } of marcasComCota) {
+          const jaUsados = Object.values(acumuladoFinal)
+            .filter(p => p.ambiente === ambiente && p.marcas?.includes(nomeMarca)).length
+          const faltam = qtd - jaUsados
+          if (faltam <= 0) continue
+
+          // Candidatos não geocodificados ainda
+          const candidatosBrutos = todosPontos.filter(p =>
+            p.ambiente === ambiente &&
+            p.marcas.includes(nomeMarca) &&
+            !acumuladoFinal[p.cod_ponto]
+          )
+
+          if (candidatosBrutos.length === 0) continue
+
+          // Geocodifica candidatos (com rate limit)
+          setGeocodingProgress(`Buscando complementos para ${nomeMarca}...`)
+          const geocCandidatos = await geocodificar(candidatosBrutos.slice(0, Math.min(faltam * 3, 15)))
+
+          // Ordena por distância ao centroide
+          function dist(a, b) {
+            const dLat = (b.lat - a.lat) * Math.PI / 180
+            const dLng = (b.lng - a.lng) * Math.PI / 180
+            const x = Math.sin(dLat/2)**2 + Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2
+            return 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1-x))
+          }
+
+          geocCandidatos
+            .sort((a, b) => dist(centroide, a) - dist(centroide, b))
+            .slice(0, faltam)
+            .forEach(p => { acumuladoFinal[p.cod_ponto] = p })
+        }
+      }
+
+      const geocodificados = Object.values(acumuladoFinal)
       const rotaOtimizada = otimizarRota(geocodificados)
       setRotaGerada(rotaOtimizada)
       setLinkMaps(gerarLinkGoogleMaps(rotaOtimizada))
