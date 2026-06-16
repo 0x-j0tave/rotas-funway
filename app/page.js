@@ -536,15 +536,23 @@ export default function Home() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontSize: '13px', fontWeight: '600', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome_ponto || p.endereco}</p>
                       <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.endereco}</p>
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span style={{ fontSize: '11px', backgroundColor: '#1e1b4b', color: '#a5b4fc', padding: '2px 8px', borderRadius: '20px', fontWeight: '500' }}>{p.ambiente}</span>
-                        {p.marcas?.map((m, mi) => (
+                        {p.marcas?.map((m) => (
                           <span key={m} style={{
                             fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: '500',
                             backgroundColor: `${CORES_MARCAS[marcas.findIndex(mk => mk.nome === m) % CORES_MARCAS.length]}22`,
                             color: CORES_MARCAS[marcas.findIndex(mk => mk.nome === m) % CORES_MARCAS.length]
                           }}>{m}</span>
                         ))}
+                        <span style={{
+                          fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: '700',
+                          backgroundColor: p.marcas?.length === marcas.length ? '#052e16' : p.marcas?.length > 1 ? '#1c1917' : '#0f172a',
+                          color: p.marcas?.length === marcas.length ? '#4ade80' : p.marcas?.length > 1 ? '#fb923c' : '#64748b',
+                          border: `1px solid ${p.marcas?.length === marcas.length ? '#166534' : p.marcas?.length > 1 ? '#92400e' : '#1e293b'}`
+                        }}>
+                          {p.marcas?.length}/{marcas.length} marcas
+                        </span>
                       </div>
                     </div>
                   </div>
