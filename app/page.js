@@ -117,20 +117,43 @@ export default function Home() {
     setGeocodingProgress('Preparando pontos...')
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
+
+      // Para cada (marca, ambiente, quantidade), seleciona os melhores pontos
+      // independentemente — priorizando pontos com mais marcas (maior sobreposição).
+      // Pontos compartilhados entram 1x na rota com todas as marcas no label.
+      // Pontos exclusivos de uma marca entram normalmente para completar a cota.
       const acumulado = {}
+
       for (const [ambiente, porMarca] of Object.entries(selecao)) {
         for (const [nomeMarca, quantidade] of Object.entries(porMarca)) {
           const qtd = parseInt(quantidade) || 0
           if (qtd <= 0) continue
+
+          // Busca pontos desta marca neste ambiente, ordenados por sobreposição
           const candidatos = todosPontos
             .filter(p => p.ambiente === ambiente && p.marcas.includes(nomeMarca))
             .sort((a, b) => b.marcas.length - a.marcas.length)
+
+          // Separa: pontos já acumulados (de outras marcas) vs novos
+          // Primeiro tenta usar pontos já na rota (deduplica), depois adiciona novos
+          const jaNaRota = candidatos.filter(p => acumulado[p.cod_ponto])
+          const novos = candidatos.filter(p => !acumulado[p.cod_ponto])
+
           let adicionados = 0
-          for (const p of candidatos) {
+
+          // Conta pontos já na rota que satisfazem esta cota
+          for (const p of jaNaRota) {
             if (adicionados >= qtd) break
-            const key = p.cod_ponto
-            if (!acumulado[key]) acumulado[key] = { ...p }
-            else if (!acumulado[key].marcas.includes(nomeMarca)) acumulado[key].marcas.push(nomeMarca)
+            if (!acumulado[p.cod_ponto].marcas.includes(nomeMarca)) {
+              acumulado[p.cod_ponto].marcas.push(nomeMarca)
+            }
+            adicionados++
+          }
+
+          // Completa com pontos novos (exclusivos desta marca ou não usados ainda)
+          for (const p of novos) {
+            if (adicionados >= qtd) break
+            acumulado[p.cod_ponto] = { ...p }
             adicionados++
           }
         }
