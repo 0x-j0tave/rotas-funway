@@ -289,19 +289,20 @@ export default function Home() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0f1117', color: '#e2e8f0' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#0d0d0d', color: '#e2e8f0' }}>
       {/* Header */}
-      <div style={{ backgroundColor: '#1a1d27', borderBottom: '1px solid #2d3148', padding: '16px 32px' }}>
+      <div style={{ backgroundColor: '#111111', borderBottom: '1px solid #2a2a2a', padding: '14px 32px' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🗺️</div>
-            <h1 style={{ fontSize: '16px', fontWeight: '600', color: '#f1f5f9', letterSpacing: '0.02em', textTransform: 'uppercase' }}>
-              Descomplicando Rotas Funway
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <img src="/funway-logo.png" alt="Funway" style={{ height: '36px', width: '36px', objectFit: 'contain' }} />
+            <div style={{ width: '1px', height: '28px', backgroundColor: '#2a2a2a' }} />
+            <h1 style={{ fontSize: '13px', fontWeight: '600', color: '#e5e5e5', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Descomplicando Rotas
             </h1>
           </div>
           <button onClick={carregarHistorico}
-            style={{ fontSize: '13px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
-            Ver histórico
+            style={{ fontSize: '12px', color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', letterSpacing: '0.05em' }}>
+            VER HISTÓRICO
           </button>
         </div>
       </div>
@@ -310,7 +311,7 @@ export default function Home() {
 
         {/* Histórico */}
         {mostrarHistorico && (
-          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
+          <div style={{ backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '20px', marginBottom: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#f1f5f9' }}>Rotas salvas</h2>
               <button onClick={() => setMostrarHistorico(false)} style={{ color: '#64748b', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>✕</button>
@@ -320,7 +321,7 @@ export default function Home() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {historico.map(r => (
-                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148' }}>
+                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', backgroundColor: '#0d0d0d', borderRadius: '10px', border: '1px solid #252525' }}>
                     <div>
                       <p style={{ fontSize: '13px', fontWeight: '500', color: '#e2e8f0' }}>{r.nome}</p>
                       <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{r.cidade} · {new Date(r.criado_em).toLocaleDateString('pt-BR')}</p>
@@ -331,7 +332,7 @@ export default function Home() {
                       setCidadeSelecionada(r.cidade)
                       setEtapa(3)
                       setMostrarHistorico(false)
-                    }} style={{ fontSize: '12px', color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>Abrir →</button>
+                    }} style={{ fontSize: '12px', color: '#f97316', background: 'none', border: 'none', cursor: 'pointer', fontWeight: '500' }}>Abrir →</button>
                   </div>
                 ))}
               </div>
@@ -351,21 +352,21 @@ export default function Home() {
                 border: etapa >= n ? 'none' : '1px solid #2d3148'
               }}>{n}</div>
               <span style={{ fontSize: '13px', fontWeight: '500', color: etapa >= n ? '#e2e8f0' : '#475569' }}>{label}</span>
-              {i < 2 && <div style={{ width: '32px', height: '1px', backgroundColor: '#2d3148' }} />}
+              {i < 2 && <div style={{ width: '32px', height: '1px', backgroundColor: '#252525' }} />}
             </div>
           ))}
         </div>
 
         {/* ETAPA 1 — Upload */}
         {etapa === 1 && (
-          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '28px' }}>
+          <div style={{ backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '28px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9', marginBottom: '6px' }}>Upload das listas de pontos</h2>
             <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>Suba um Excel por marca. Você pode adicionar quantas marcas quiser.</p>
 
             {marcas.map((marca, idx) => (
               <div key={marca.nome} style={{
                 display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148',
+                backgroundColor: '#0d0d0d', borderRadius: '10px', border: '1px solid #252525',
                 marginBottom: '10px'
               }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: CORES_MARCAS[idx % CORES_MARCAS.length], flexShrink: 0 }} />
@@ -386,7 +387,7 @@ export default function Home() {
             {marcas.length > 0 && (
               <button onClick={() => setEtapa(2)} style={{
                 marginTop: '24px', width: '100%', padding: '14px',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                background: 'linear-gradient(135deg, #f97316, #ea580c)',
                 color: 'white', border: 'none', borderRadius: '10px',
                 fontSize: '14px', fontWeight: '600', cursor: 'pointer'
               }}>
@@ -398,7 +399,7 @@ export default function Home() {
 
         {/* ETAPA 2 — Parâmetros */}
         {etapa === 2 && (
-          <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '28px' }}>
+          <div style={{ backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '28px' }}>
             <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9', marginBottom: '6px' }}>Parâmetros da rota</h2>
             <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '24px' }}>Selecione a cidade e quantos pontos de cada marca e ativo deseja na rota.</p>
 
@@ -406,8 +407,8 @@ export default function Home() {
             <div style={{ marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#94a3b8', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cidade</label>
               <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)} style={{
-                width: '100%', padding: '10px 14px', backgroundColor: '#0f1117',
-                border: '1px solid #2d3148', borderRadius: '8px', color: '#e2e8f0',
+                width: '100%', padding: '10px 14px', backgroundColor: '#0d0d0d',
+                border: '1px solid #252525', borderRadius: '8px', color: '#e2e8f0',
                 fontSize: '13px', cursor: 'pointer', outline: 'none'
               }}>
                 <option value="">Selecione uma cidade</option>
@@ -419,7 +420,7 @@ export default function Home() {
             {cidadeSelecionada && ambientesDisponiveis.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
                 {ambientesDisponiveis.map(amb => (
-                  <div key={amb} style={{ backgroundColor: '#0f1117', border: '1px solid #2d3148', borderRadius: '12px', padding: '16px' }}>
+                  <div key={amb} style={{ backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '12px', padding: '16px' }}>
                     <p style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{amb}</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {marcas.map((marca, idx) => {
@@ -440,7 +441,7 @@ export default function Home() {
                               placeholder="0"
                               style={{
                                 width: '64px', padding: '6px 10px', textAlign: 'center',
-                                backgroundColor: '#1a1d27', border: `1px solid ${selecao[amb]?.[marca.nome] > 0 ? cor : '#2d3148'}`,
+                                backgroundColor: '#161616', border: `1px solid ${selecao[amb]?.[marca.nome] > 0 ? cor : '#252525'}`,
                                 borderRadius: '8px', color: '#e2e8f0', fontSize: '13px',
                                 outline: 'none', fontWeight: '600'
                               }}
@@ -453,10 +454,10 @@ export default function Home() {
                 ))}
 
                 {totalPontos > 0 && (
-                  <div style={{ padding: '12px 16px', backgroundColor: '#1e1b4b', borderRadius: '10px', border: '1px solid #4338ca' }}>
-                    <p style={{ fontSize: '13px', color: '#a5b4fc', fontWeight: '500' }}>
-                      Total estimado: <strong style={{ color: '#818cf8' }}>{totalPontos} ponto{totalPontos > 1 ? 's' : ''}</strong>
-                      <span style={{ color: '#6366f1', marginLeft: '4px' }}>(pode ser menor após deduplicação)</span>
+                  <div style={{ padding: '12px 16px', backgroundColor: '#1c1008', borderRadius: '10px', border: '1px solid #9a3412' }}>
+                    <p style={{ fontSize: '13px', color: '#fb923c', fontWeight: '500' }}>
+                      Total estimado: <strong style={{ color: '#f97316' }}>{totalPontos} ponto{totalPontos > 1 ? 's' : ''}</strong>
+                      <span style={{ color: '#f97316', marginLeft: '4px' }}>(pode ser menor após deduplicação)</span>
                     </p>
                   </div>
                 )}
@@ -466,7 +467,7 @@ export default function Home() {
             <div style={{ display: 'flex', gap: '12px' }}>
               <button onClick={() => setEtapa(1)} style={{
                 flex: 1, padding: '14px', backgroundColor: 'transparent',
-                border: '1px solid #2d3148', borderRadius: '10px', color: '#94a3b8',
+                border: '1px solid #252525', borderRadius: '10px', color: '#94a3b8',
                 fontSize: '14px', fontWeight: '500', cursor: 'pointer'
               }}>← Voltar</button>
               <button onClick={gerarRota} disabled={!cidadeSelecionada || totalPontos === 0 || loading} style={{
@@ -485,7 +486,7 @@ export default function Home() {
         {etapa === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Card do mapa */}
-            <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <div>
                   <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#f1f5f9' }}>Rota gerada</h2>
@@ -493,18 +494,18 @@ export default function Home() {
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }} style={{
-                    padding: '7px 14px', backgroundColor: 'transparent', border: '1px solid #2d3148',
+                    padding: '7px 14px', backgroundColor: 'transparent', border: '1px solid #252525',
                     borderRadius: '8px', color: '#94a3b8', fontSize: '12px', cursor: 'pointer', fontWeight: '500'
                   }}>Ajustar</button>
                   <button onClick={salvarRota} disabled={rotaSalva} style={{
-                    padding: '7px 14px', background: rotaSalva ? '#1e2235' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    padding: '7px 14px', background: rotaSalva ? '#1a1a1a' : 'linear-gradient(135deg, #f97316, #ea580c)',
                     border: 'none', borderRadius: '8px', color: rotaSalva ? '#475569' : 'white',
                     fontSize: '12px', cursor: rotaSalva ? 'default' : 'pointer', fontWeight: '600'
                   }}>{rotaSalva ? 'Salva ✓' : 'Salvar'}</button>
                 </div>
               </div>
 
-              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #2d3148', marginBottom: '16px', height: '460px' }}>
+              <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #252525', marginBottom: '16px', height: '460px' }}>
                 <Mapa pontos={rotaGerada} />
               </div>
 
@@ -515,21 +516,21 @@ export default function Home() {
                   textAlign: 'center', textDecoration: 'none', display: 'block'
                 }}>🗺️ Abrir no Google Maps</a>
                 <button onClick={exportarCSV} style={{
-                  flex: 1, padding: '12px', backgroundColor: 'transparent', border: '1px solid #2d3148',
+                  flex: 1, padding: '12px', backgroundColor: 'transparent', border: '1px solid #252525',
                   borderRadius: '10px', color: '#94a3b8', fontSize: '13px', fontWeight: '600', cursor: 'pointer'
                 }}>📥 Exportar CSV</button>
               </div>
             </div>
 
             {/* Lista de pontos */}
-            <div style={{ backgroundColor: '#1a1d27', border: '1px solid #2d3148', borderRadius: '16px', padding: '20px' }}>
+            <div style={{ backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '20px' }}>
               <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '16px' }}>Pontos da rota</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {rotaGerada.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px 14px', backgroundColor: '#0f1117', borderRadius: '10px', border: '1px solid #2d3148' }}>
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', padding: '12px 14px', backgroundColor: '#0d0d0d', borderRadius: '10px', border: '1px solid #252525' }}>
                     <div style={{
                       width: '24px', height: '24px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                      background: 'linear-gradient(135deg, #f97316, #ea580c)',
                       color: 'white', fontSize: '11px', fontWeight: '700',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                     }}>{i + 1}</div>
@@ -537,7 +538,7 @@ export default function Home() {
                       <p style={{ fontSize: '13px', fontWeight: '600', color: '#e2e8f0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nome_ponto || p.endereco}</p>
                       <p style={{ fontSize: '11px', color: '#475569', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.endereco}</p>
                       <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', backgroundColor: '#1e1b4b', color: '#a5b4fc', padding: '2px 8px', borderRadius: '20px', fontWeight: '500' }}>{p.ambiente}</span>
+                        <span style={{ fontSize: '11px', backgroundColor: '#1c1008', color: '#fb923c', padding: '2px 8px', borderRadius: '20px', fontWeight: '500' }}>{p.ambiente}</span>
                         {p.marcas?.map((m) => (
                           <span key={m} style={{
                             fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: '500',
@@ -547,9 +548,9 @@ export default function Home() {
                         ))}
                         <span style={{
                           fontSize: '11px', padding: '2px 8px', borderRadius: '20px', fontWeight: '700',
-                          backgroundColor: p.marcas?.length === marcas.length ? '#052e16' : p.marcas?.length > 1 ? '#1c1917' : '#0f172a',
-                          color: p.marcas?.length === marcas.length ? '#4ade80' : p.marcas?.length > 1 ? '#fb923c' : '#64748b',
-                          border: `1px solid ${p.marcas?.length === marcas.length ? '#166534' : p.marcas?.length > 1 ? '#92400e' : '#1e293b'}`
+                          backgroundColor: p.marcas?.length === marcas.length ? '#1c0a00' : p.marcas?.length > 1 ? '#1c1007' : '#111',
+                          color: p.marcas?.length === marcas.length ? '#f97316' : p.marcas?.length > 1 ? '#fb923c' : '#404040',
+                          border: `1px solid ${p.marcas?.length === marcas.length ? '#9a3412' : p.marcas?.length > 1 ? '#78350f' : '#252525'}`
                         }}>
                           {p.marcas?.length}/{marcas.length} marcas
                         </span>
@@ -583,18 +584,18 @@ function AddMarca({ onAdd }) {
   }
 
   return (
-    <div style={{ border: '1px dashed #2d3148', borderRadius: '12px', padding: '16px', marginTop: '4px' }}>
+    <div style={{ border: '1px dashed #252525', borderRadius: '12px', padding: '16px', marginTop: '4px' }}>
       <p style={{ fontSize: '12px', fontWeight: '600', color: '#64748b', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Adicionar marca</p>
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <input type="text" placeholder="Nome da marca (ex: Guaraná)" value={nome} onChange={e => setNome(e.target.value)}
           style={{
-            flex: 1, minWidth: '160px', padding: '9px 14px', backgroundColor: '#0f1117',
-            border: '1px solid #2d3148', borderRadius: '8px', color: '#e2e8f0',
+            flex: 1, minWidth: '160px', padding: '9px 14px', backgroundColor: '#0d0d0d',
+            border: '1px solid #252525', borderRadius: '8px', color: '#e2e8f0',
             fontSize: '13px', outline: 'none'
           }} />
         <label style={{
           flex: 1, minWidth: '160px', cursor: 'pointer', padding: '9px 14px',
-          backgroundColor: '#0f1117', border: '1px solid #2d3148', borderRadius: '8px',
+          backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '8px',
           color: file ? '#a5b4fc' : '#475569', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px'
         }}>
           <span>📎</span>
@@ -602,7 +603,7 @@ function AddMarca({ onAdd }) {
           <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0])} />
         </label>
         <button onClick={handleSubmit} style={{
-          padding: '9px 20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          padding: '9px 20px', background: 'linear-gradient(135deg, #f97316, #ea580c)',
           border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px',
           fontWeight: '600', cursor: 'pointer'
         }}>Adicionar</button>
