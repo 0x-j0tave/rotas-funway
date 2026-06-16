@@ -1,21 +1,22 @@
 'use client'
 import { useState, useCallback } from 'react'
-import { parsearExcel } from "@/lib/excel"
-import { otimizarRota, gerarLinkGoogleMaps } from "@/lib/rota"
+import { parsearExcel } from '@/lib/excel'
+import { otimizarRota, gerarLinkGoogleMaps } from '@/lib/rota'
 import dynamic from 'next/dynamic'
+
+const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
 
 function extrairCidades(pontos) {
   return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
 }
-
-const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
 
 export default function Home() {
   const [marcas, setMarcas] = useState([])
   const [cidadeSelecionada, setCidadeSelecionada] = useState('')
   const [cidadesDisponiveis, setCidadesDisponiveis] = useState([])
   const [ambientesDisponiveis, setAmbientesDisponiveis] = useState([])
-  const [quantidadesPorAmbiente, setQuantidadesPorAmbiente] = useState({})
+  // { "Ambiente X": { "Marca A": 2, "Marca B": 1 } }
+  const [selecao, setSelecao] = useState({})
   const [rotaGerada, setRotaGerada] = useState([])
   const [linkMaps, setLinkMaps] = useState('')
   const [loading, setLoading] = useState(false)
@@ -33,8 +34,7 @@ export default function Home() {
         const semEssa = prev.filter(m => m.nome !== nomeMarca)
         const novas = [...semEssa, { nome: nomeMarca, pontos }]
         const todosPontos = novas.flatMap(m => m.pontos)
-        const cidades = extrairCidades(todosPontos)
-        setCidadesDisponiveis(cidades)
+        setCidadesDisponiveis(extrairCidades(todosPontos))
         return novas
       })
     } catch (err) {
@@ -42,30 +42,55 @@ export default function Home() {
     }
   }, [])
 
-  // Cross-match: agrupa pontos por cod_ponto contando marcas
+  // Cross-match: agrupa por cod_ponto somando marcas
   const crossMatch = useCallback((cidade) => {
     const mapa = {}
     marcas.forEach(marca => {
-      const filtrados = marca.pontos.filter(p => !cidade || p.cidade === cidade)
-      filtrados.forEach(p => {
-        const key = p.cod_ponto
-        if (!key) return
-        if (!mapa[key]) mapa[key] = { ...p, marcas: [] }
-        if (!mapa[key].marcas.includes(marca.nome)) mapa[key].marcas.push(marca.nome)
-      })
+      marca.pontos
+        .filter(p => !cidade || p.cidade === cidade)
+        .forEach(p => {
+          const key = p.cod_ponto
+          if (!key) return
+          if (!mapa[key]) mapa[key] = { ...p, marcas: [] }
+          if (!mapa[key].marcas.includes(marca.nome)) mapa[key].marcas.push(marca.nome)
+        })
     })
     return Object.values(mapa)
   }, [marcas])
 
   const handleCidade = (cidade) => {
     setCidadeSelecionada(cidade)
-    // Usa crossMatch para pegar ambientes reais dos pontos cruzados
     const todosPontos = marcas.flatMap(m => m.pontos)
     const filtrados = cidade ? todosPontos.filter(p => p.cidade === cidade) : todosPontos
     const ambientes = [...new Set(filtrados.map(p => p.ambiente).filter(Boolean))].sort()
     setAmbientesDisponiveis(ambientes)
-    setQuantidadesPorAmbiente({})
+    setSelecao({})
   }
+
+  const setQtd = (ambiente, marca, valor) => {
+    setSelecao(prev => ({
+      ...prev,
+      [ambiente]: {
+        ...(prev[ambiente] || {}),
+        [marca]: parseInt(valor) || 0
+      }
+    }))
+  }
+
+  // Conta pontos disponíveis por ambiente+marca (no crossMatch)
+  const pontosCruzados = cidadeSelecionada ? crossMatch(cidadeSelecionada) : []
+
+  const disponivelPorAmbienteMarca = {}
+  pontosCruzados.forEach(p => {
+    if (!disponivelPorAmbienteMarca[p.ambiente]) disponivelPorAmbienteMarca[p.ambiente] = {}
+    p.marcas.forEach(m => {
+      disponivelPorAmbienteMarca[p.ambiente][m] = (disponivelPorAmbienteMarca[p.ambiente][m] || 0) + 1
+    })
+  })
+
+  // Total de pontos selecionados (após deduplicação estimada)
+  const totalPontos = Object.values(selecao).reduce((total, porMarca) =>
+    total + Object.values(porMarca).reduce((a, b) => a + (parseInt(b) || 0), 0), 0)
 
   const geocodificar = async (pontos) => {
     const resultado = []
@@ -82,7 +107,7 @@ export default function Home() {
         if (geo && geo.lat) resultado.push({ ...ponto, lat: geo.lat, lng: geo.lng })
         else console.warn('Não geocodificado:', ponto.endereco)
       } catch (e) {
-        console.warn('Erro geocodificando:', ponto.endereco, e)
+        console.warn('Erro geocodificando:', ponto.endereco)
       }
       await new Promise(r => setTimeout(r, 1100))
     }
@@ -95,24 +120,50 @@ export default function Home() {
 
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
+      // mapa de pontos por marca para lookup rápido
+      const pontosPorMarca = {}
+      marcas.forEach(marca => {
+        pontosPorMarca[marca.nome] = {}
+        marca.pontos
+          .filter(p => !cidadeSelecionada || p.cidade === cidadeSelecionada)
+          .forEach(p => { pontosPorMarca[marca.nome][p.cod_ponto] = p })
+      })
 
-      // Seleciona pontos por ambiente com score de sobreposição
-      const selecionados = []
-      for (const [ambiente, quantidade] of Object.entries(quantidadesPorAmbiente)) {
-        const qtd = parseInt(quantidade) || 0
-        if (qtd <= 0) continue
+      // Acumula selecionados por cod_ponto para deduplicar
+      // key: cod_ponto, value: ponto com marcas acumuladas
+      const acumulado = {}
 
-        const doAmbiente = todosPontos
-          .filter(p => p.ambiente === ambiente)
-          .map(p => ({ ...p, score: (p.marcas?.length || 1) / marcas.length }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, qtd)
+      for (const [ambiente, porMarca] of Object.entries(selecao)) {
+        for (const [nomeMarca, quantidade] of Object.entries(porMarca)) {
+          const qtd = parseInt(quantidade) || 0
+          if (qtd <= 0) continue
 
-        selecionados.push(...doAmbiente)
+          // Pontos desta marca neste ambiente, ordenados por sobreposição (mais marcas = melhor)
+          const candidatos = todosPontos
+            .filter(p => p.ambiente === ambiente && p.marcas.includes(nomeMarca))
+            .sort((a, b) => b.marcas.length - a.marcas.length)
+
+          let adicionados = 0
+          for (const p of candidatos) {
+            if (adicionados >= qtd) break
+            const key = p.cod_ponto
+            if (!acumulado[key]) {
+              acumulado[key] = { ...p }
+            } else {
+              // Ponto já existe — garante que a marca atual está listada
+              if (!acumulado[key].marcas.includes(nomeMarca)) {
+                acumulado[key].marcas.push(nomeMarca)
+              }
+            }
+            adicionados++
+          }
+        }
       }
 
+      const selecionados = Object.values(acumulado)
+
       if (selecionados.length === 0) {
-        alert('Nenhum ponto selecionado. Verifique se as quantidades estão preenchidas e se há pontos disponíveis.')
+        alert('Nenhum ponto selecionado. Verifique se as quantidades estão preenchidas.')
         setLoading(false)
         setGeocodingProgress(null)
         return
@@ -121,7 +172,7 @@ export default function Home() {
       const geocodificados = await geocodificar(selecionados)
 
       if (geocodificados.length === 0) {
-        alert('Nenhum ponto foi geocodificado. Verifique os endereços.')
+        alert('Nenhum ponto foi geocodificado.')
         setLoading(false)
         setGeocodingProgress(null)
         return
@@ -145,7 +196,7 @@ export default function Home() {
     await fetch('/api/rotas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nome, cidade: cidadeSelecionada, parametros: quantidadesPorAmbiente, pontos: rotaGerada })
+      body: JSON.stringify({ nome, cidade: cidadeSelecionada, parametros: selecao, pontos: rotaGerada })
     })
     setRotaSalva(true)
     alert('Rota salva!')
@@ -171,15 +222,9 @@ export default function Home() {
     a.click()
   }
 
-  const totalPontos = Object.values(quantidadesPorAmbiente).reduce((a, b) => a + (parseInt(b) || 0), 0)
-
-  // Pontos disponíveis por ambiente na cidade selecionada (do crossMatch)
-  const pontosCruzados = cidadeSelecionada ? crossMatch(cidadeSelecionada) : []
-  const disponivelPorAmbiente = {}
-  pontosCruzados.forEach(p => {
-    if (!disponivelPorAmbiente[p.ambiente]) disponivelPorAmbiente[p.ambiente] = 0
-    disponivelPorAmbiente[p.ambiente]++
-  })
+  const nomesAmbientesComSelecao = ambientesDisponiveis.filter(amb =>
+    Object.values(selecao[amb] || {}).some(v => (parseInt(v) || 0) > 0)
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -242,14 +287,11 @@ export default function Home() {
                 <p className="font-medium text-sm text-green-800">{marca.nome}</p>
                 <p className="text-xs text-green-600">{marca.pontos.length} pontos carregados</p>
               </div>
-              <button onClick={() => {
-                setMarcas(prev => {
-                  const novas = prev.filter(m => m.nome !== marca.nome)
-                  const todosPontos = novas.flatMap(m => m.pontos)
-                  setCidadesDisponiveis(extrairCidades ? [...new Set(todosPontos.map(p => p.cidade).filter(Boolean))].sort() : [])
-                  return novas
-                })
-              }} className="text-xs text-red-400 hover:text-red-600">Remover</button>
+              <button onClick={() => setMarcas(prev => {
+                const novas = prev.filter(m => m.nome !== marca.nome)
+                setCidadesDisponiveis(extrairCidades(novas.flatMap(m => m.pontos)))
+                return novas
+              })} className="text-xs text-red-400 hover:text-red-600">Remover</button>
             </div>
           ))}
           <AddMarca onAdd={handleUpload} />
@@ -265,7 +307,7 @@ export default function Home() {
       {etapa === 2 && (
         <div className="bg-white rounded-xl border p-6">
           <h2 className="font-semibold text-gray-800 mb-1">Parâmetros da rota</h2>
-          <p className="text-sm text-gray-500 mb-6">Selecione a cidade e quantos pontos de cada ativo deseja.</p>
+          <p className="text-sm text-gray-500 mb-6">Selecione a cidade e quantos pontos de cada marca e ativo deseja na rota.</p>
 
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Cidade</label>
@@ -277,29 +319,47 @@ export default function Home() {
           </div>
 
           {cidadeSelecionada && ambientesDisponiveis.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-3">Pontos por ativo</label>
-              <div className="space-y-3">
-                {ambientesDisponiveis.map(amb => {
-                  const disponiveis = disponivelPorAmbiente[amb] || 0
-                  return (
-                    <div key={amb} className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700">{amb}</p>
-                        <p className="text-xs text-gray-400">{disponiveis} pontos disponíveis</p>
-                      </div>
-                      <input
-                        type="number" min="0" max={disponiveis}
-                        value={quantidadesPorAmbiente[amb] || ''}
-                        onChange={e => setQuantidadesPorAmbiente(prev => ({ ...prev, [amb]: parseInt(e.target.value) || 0 }))}
-                        placeholder="0"
-                        className="w-20 border rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  )
-                })}
-              </div>
-              {totalPontos > 0 && <p className="mt-4 text-sm text-blue-600 font-medium">Total: {totalPontos} ponto{totalPontos > 1 ? 's' : ''}</p>}
+            <div className="mb-6 space-y-6">
+              {ambientesDisponiveis.map(amb => (
+                <div key={amb} className="border rounded-xl p-4">
+                  <p className="font-medium text-gray-800 mb-3">{amb}</p>
+                  <div className="space-y-3">
+                    {marcas.map(marca => {
+                      const disponiveis = disponivelPorAmbienteMarca[amb]?.[marca.nome] || 0
+                      if (disponiveis === 0) return (
+                        <div key={marca.nome} className="flex items-center gap-4 opacity-40">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-500">{marca.nome}</p>
+                            <p className="text-xs text-gray-400">Sem pontos neste ativo</p>
+                          </div>
+                          <div className="w-20 text-center text-xs text-gray-300">—</div>
+                        </div>
+                      )
+                      return (
+                        <div key={marca.nome} className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <p className="text-sm text-gray-700">{marca.nome}</p>
+                            <p className="text-xs text-gray-400">{disponiveis} pontos disponíveis</p>
+                          </div>
+                          <input
+                            type="number" min="0" max={disponiveis}
+                            value={selecao[amb]?.[marca.nome] || ''}
+                            onChange={e => setQtd(amb, marca.nome, e.target.value)}
+                            placeholder="0"
+                            className="w-20 border rounded-lg px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+
+              {totalPontos > 0 && (
+                <p className="text-sm text-blue-600 font-medium">
+                  Total estimado: {totalPontos} ponto{totalPontos > 1 ? 's' : ''} (pode ser menor após deduplicação de pontos compartilhados entre marcas)
+                </p>
+              )}
             </div>
           )}
 
@@ -320,7 +380,7 @@ export default function Home() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="font-semibold text-gray-800">Rota gerada</h2>
-                <p className="text-sm text-gray-500">{cidadeSelecionada} · {rotaGerada.length} pontos</p>
+                <p className="text-sm text-gray-500">{cidadeSelecionada} · {rotaGerada.length} ponto{rotaGerada.length !== 1 ? 's' : ''}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => { setEtapa(2); setRotaGerada([]); setRotaSalva(false) }}
@@ -365,7 +425,7 @@ export default function Home() {
             </div>
           </div>
 
-          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setRotaSalva(false) }}
+          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
             className="w-full text-sm text-gray-500 hover:text-gray-700 py-2">
             + Nova rota do zero
           </button>
