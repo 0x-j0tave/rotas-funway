@@ -816,36 +816,104 @@ export default function Home() {
 }
 
 function AddMarca({ onAdd }) {
-  const [nome, setNome] = useState('')
-  const [file, setFile] = useState(null)
-  const [salvar, setSalvar] = useState(false)
+  const [arquivos, setArquivos] = useState([]) // [{ file, nome, salvar }]
+  const [arrastando, setArrastando] = useState(false)
 
-  const handleSubmit = () => {
-    if (!nome.trim() || !file) { alert('Preencha o nome da marca e selecione o arquivo.'); return }
-    onAdd(file, nome.trim(), salvar)
-    setNome('')
-    setFile(null)
-    setSalvar(false)
+  const adicionarArquivos = (files) => {
+    const novos = Array.from(files).map(file => ({
+      file,
+      nome: file.name.replace(/\.(xlsx|xls|csv)$/i, '').replace(/[_-]/g, ' ').trim(),
+      salvar: false,
+      id: Math.random().toString(36).slice(2)
+    }))
+    setArquivos(prev => {
+      const existentes = new Set(prev.map(a => a.file.name))
+      return [...prev, ...novos.filter(n => !existentes.has(n.file.name))]
+    })
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    setArrastando(false)
+    adicionarArquivos(e.dataTransfer.files)
+  }
+
+  const remover = (id) => setArquivos(prev => prev.filter(a => a.id !== id))
+
+  const atualizar = (id, campo, valor) => {
+    setArquivos(prev => prev.map(a => a.id === id ? { ...a, [campo]: valor } : a))
+  }
+
+  const confirmar = () => {
+    const invalidos = arquivos.filter(a => !a.nome.trim())
+    if (invalidos.length > 0) { alert('Preencha o nome de todas as marcas.'); return }
+    arquivos.forEach(a => onAdd(a.file, a.nome.trim(), a.salvar))
+    setArquivos([])
   }
 
   return (
     <div style={{ border: '1px dashed #252525', borderRadius: '12px', padding: '16px', marginTop: '8px' }}>
-      <p style={{ fontSize: '11px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Adicionar marca</p>
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-        <input type="text" placeholder="Nome da marca" value={nome} onChange={e => setNome(e.target.value)}
-          style={{ flex: 1, minWidth: '140px', padding: '9px 12px', backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '8px', color: '#e5e5e5', fontSize: '13px', outline: 'none' }} />
-        <label style={{ flex: 1, minWidth: '140px', cursor: 'pointer', padding: '9px 12px', backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '8px', color: file ? '#f97316' : '#4b5563', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>📎</span>
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file ? file.name : 'Selecionar Excel'}</span>
-          <input type="file" accept=".xlsx,.xls,.csv" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0])} />
-        </label>
-        <button onClick={handleSubmit} style={{ padding: '9px 18px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Adicionar</button>
-      </div>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-        <input type="checkbox" checked={salvar} onChange={e => setSalvar(e.target.checked)}
-          style={{ width: '14px', height: '14px', accentColor: '#f97316' }} />
-        <span style={{ fontSize: '12px', color: '#6b7280' }}>Salvar lista por 7 dias para a equipe reutilizar</span>
+      <p style={{ fontSize: '11px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Adicionar marcas</p>
+
+      {/* Drop zone */}
+      <label
+        onDragOver={e => { e.preventDefault(); setArrastando(true) }}
+        onDragLeave={() => setArrastando(false)}
+        onDrop={handleDrop}
+        style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          gap: '8px', padding: '24px', marginBottom: arquivos.length > 0 ? '14px' : '0',
+          backgroundColor: arrastando ? '#1c0a00' : '#0d0d0d',
+          border: `2px dashed ${arrastando ? '#f97316' : '#252525'}`,
+          borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s'
+        }}>
+        <span style={{ fontSize: '24px' }}>📂</span>
+        <span style={{ fontSize: '13px', color: arrastando ? '#f97316' : '#6b7280', fontWeight: '500' }}>
+          {arrastando ? 'Solte os arquivos aqui' : 'Arraste os Excels ou clique para selecionar'}
+        </span>
+        <span style={{ fontSize: '11px', color: '#4b5563' }}>Você pode subir vários de uma vez</span>
+        <input type="file" accept=".xlsx,.xls,.csv" multiple style={{ display: 'none' }}
+          onChange={e => adicionarArquivos(e.target.files)} />
       </label>
+
+      {/* Lista de arquivos para nomear */}
+      {arquivos.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+          {arquivos.map(a => (
+            <div key={a.id} style={{ backgroundColor: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '10px', padding: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', color: '#4b5563', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📄 {a.file.name}</span>
+                <button onClick={() => remover(a.id)} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>✕</button>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <input
+                  type="text"
+                  placeholder="Nome da marca (ex: Guaraná)"
+                  value={a.nome}
+                  onChange={e => atualizar(a.id, 'nome', e.target.value)}
+                  style={{ flex: 1, minWidth: '160px', padding: '7px 10px', backgroundColor: '#161616', border: `1px solid ${a.nome.trim() ? '#f97316' : '#252525'}`, borderRadius: '7px', color: '#e5e5e5', fontSize: '13px', fontWeight: '600', outline: 'none' }}
+                />
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <input type="checkbox" checked={a.salvar} onChange={e => atualizar(a.id, 'salvar', e.target.checked)}
+                    style={{ width: '13px', height: '13px', accentColor: '#f97316' }} />
+                  <span style={{ fontSize: '11px', color: '#6b7280' }}>Salvar 7 dias</span>
+                </label>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {arquivos.length > 0 && (
+        <button onClick={confirmar} style={{
+          width: '100%', padding: '11px',
+          background: 'linear-gradient(135deg, #f97316, #ea580c)',
+          border: 'none', borderRadius: '9px', color: 'white',
+          fontSize: '13px', fontWeight: '700', cursor: 'pointer'
+        }}>
+          Adicionar {arquivos.length} marca{arquivos.length > 1 ? 's' : ''} →
+        </button>
+      )}
     </div>
   )
 }
