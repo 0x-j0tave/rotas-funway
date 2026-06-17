@@ -1,7 +1,7 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Descomplicando Rotas Funway',
+  title: 'Rotas Funway',
   description: 'Sistema de rotas para campanhas OOH',
 }
 
