@@ -395,6 +395,12 @@ export default function Home() {
             <span style={{ fontSize: '12px', fontWeight: '700', color: '#222222', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Rotas Funway</span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
+            {etapa === 3 && (
+              <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
+                style={{ fontSize: '12px', padding: '7px 14px', backgroundColor: '#fefce8', border: '1px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: '600', cursor: 'pointer' }}>
+                📋 Nova rota
+              </button>
+            )}
             <button onClick={carregarExcels} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px', backgroundColor: '#f7f7f7' }}>📂 Listas salvas</button>
             <button onClick={carregarHistorico} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px', backgroundColor: '#f7f7f7' }}>🕐 Histórico</button>
           </div>
@@ -690,7 +696,7 @@ export default function Home() {
 
         {/* ETAPA 3 */}
         {etapa === 3 && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '16px', alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Coluna esquerda — mapa */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={s.card}>
