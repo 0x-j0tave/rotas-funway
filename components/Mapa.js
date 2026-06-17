@@ -2,15 +2,14 @@
 import { useEffect, useRef } from 'react'
 
 export default function Mapa({ pontos }) {
+  const containerRef = useRef(null)
   const mapRef = useRef(null)
-  const mapInstanceRef = useRef(null)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (!mapRef.current) return
+    if (!containerRef.current || !pontos || pontos.length === 0) return
 
     import('leaflet').then(L => {
-      // Fix ícones Leaflet
+      // Fix ícones
       delete L.Icon.Default.prototype._getIconUrl
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -18,60 +17,69 @@ export default function Mapa({ pontos }) {
         shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       })
 
-      // Destrói mapa anterior se existir
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
+      // Destrói instância anterior
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
       }
 
-      if (!pontos || pontos.length === 0) return
+      // Garante que o container tem dimensões antes de inicializar
+      const container = containerRef.current
+      container.style.height = '480px'
+      container.style.width = '100%'
 
-      const centro = [pontos[0].lat, pontos[0].lng]
-      const map = L.map(mapRef.current).setView(centro, 13)
-      mapInstanceRef.current = map
+      const map = L.map(container, { zoomControl: true }).setView([-15.77, -47.92], 5)
+      mapRef.current = map
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 19
       }).addTo(map)
 
-      // Adiciona marcadores numerados
+      const bounds = []
+
       pontos.forEach((ponto, idx) => {
         const icon = L.divIcon({
           className: '',
-          html: `<div style="background:#2563eb;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)">${idx + 1}</div>`,
+          html: `<div style="background:#f97316;color:white;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);font-family:Inter,sans-serif">${idx + 1}</div>`,
           iconSize: [28, 28],
           iconAnchor: [14, 14]
         })
 
-        L.marker([ponto.lat, ponto.lng], { icon })
-          .addTo(map)
-          .bindPopup(`
-            <b>${idx + 1}. ${ponto.nome_ponto || ponto.endereco}</b><br/>
-            ${ponto.ambiente}<br/>
-            <small>${ponto.marcas?.join(', ') || ''}</small>
-          `)
+        const marker = L.marker([ponto.lat, ponto.lng], { icon }).addTo(map)
+        marker.bindPopup(`
+          <div style="font-family:Inter,sans-serif;min-width:180px">
+            <b style="font-size:13px">${idx + 1}. ${ponto.nome_ponto || ponto.endereco}</b><br/>
+            <span style="font-size:11px;color:#666">${ponto.ambiente}</span><br/>
+            <span style="font-size:11px;color:#f97316">${ponto.marcas?.join(', ') || ''}</span>
+          </div>
+        `)
+        bounds.push([ponto.lat, ponto.lng])
       })
 
-      // Desenha linha da rota
-      const coordenadas = pontos.map(p => [p.lat, p.lng])
-      L.polyline(coordenadas, { color: '#2563eb', weight: 3, opacity: 0.7 }).addTo(map)
+      // Linha da rota
+      L.polyline(bounds, { color: '#f97316', weight: 2.5, opacity: 0.8, dashArray: '6,4' }).addTo(map)
 
-      // Ajusta zoom para caber todos os pontos
-      map.fitBounds(coordenadas)
+      // Ajusta zoom
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [32, 32] })
+      }
+
+      // Força invalidação do tamanho após render
+      setTimeout(() => { map.invalidateSize() }, 100)
     })
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove()
-        mapInstanceRef.current = null
+      if (mapRef.current) {
+        mapRef.current.remove()
+        mapRef.current = null
       }
     }
   }, [pontos])
 
   return (
-    <div
-      ref={mapRef}
-      style={{ height: '500px', width: '100%', borderRadius: '8px' }}
-    />
+    <div style={{ position: 'relative', width: '100%', height: '480px', backgroundColor: '#111', borderRadius: '12px', overflow: 'hidden' }}>
+      <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+    </div>
   )
 }
