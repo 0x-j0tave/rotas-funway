@@ -704,9 +704,7 @@ export default function Home() {
                     <button onClick={salvarRota} disabled={rotaSalva} style={{ ...s.btnPrimary, fontSize: '12px', padding: '7px 14px', opacity: rotaSalva ? 0.5 : 1 }}>{rotaSalva ? '✓ Salva' : 'Salvar'}</button>
                   </div>
                 </div>
-                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e0e0e0', height: '480px' }}>
-                  <Mapa pontos={rotaGerada} />
-                </div>
+  
                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                   <a href={linkMaps} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '11px', backgroundColor: '#f0fdf4', border: '1px solid #14532d', borderRadius: '10px', color: '#16a34a', fontSize: '13px', fontWeight: '700', textAlign: 'center', textDecoration: 'none' }}>
                     🗺️ Abrir no Google Maps
