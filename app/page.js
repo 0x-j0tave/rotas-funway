@@ -554,7 +554,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: marcas.length > 0 ? '1fr 380px' : '1fr', gap: '16px' }}>
             <div style={s.card}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Upload das listas</h2>
+                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>UPLOAD DAS LISTAS</h2>
                 <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>Suba um Excel por marca. Use "Listas salvas" para reutilizar uploads anteriores.</p>
               </div>
 
@@ -611,7 +611,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px', alignItems: 'start' }}>
             <div style={s.card}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Parâmetros da rota</h2>
+                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>PARÂMETROS DA ROTA</h2>
                 <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>Defina quantos pontos de cada marca e ativo deseja na rota.</p>
               </div>
 
@@ -702,7 +702,7 @@ export default function Home() {
               <div style={s.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div>
-                    <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Rota gerada</h2>
+                    <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>ROTA GERADA</h2>
                     <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{cidadeSelecionada} · {rotaGerada.length} pontos únicos</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -723,7 +723,7 @@ export default function Home() {
             {/* Coluna direita — lista de pontos */}
             <div style={s.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pontos da rota</h3>
+                <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>PONTOS DA ROTA</h3>
                 <span style={{ fontSize: '11px', color: '#888888' }}>{rotaGerada.length} pontos</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '560px', overflowY: 'auto' }}>
