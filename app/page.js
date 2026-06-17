@@ -530,9 +530,9 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '28px' }}>
           {[{ n: 1, label: 'Upload' }, { n: 2, label: 'Parâmetros' }, { n: 3, label: 'Rota' }].map(({ n, label }, i) => (
             <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: etapa === n ? '#fff7ed' : '#f0f0f0', border: `1px solid ${etapa === n ? '#f97316' : '#e0e0e0'}` }}>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', backgroundColor: etapa >= n ? '#f97316' : '#1f1f1f', color: etapa >= n ? 'white' : '#4b5563' }}>{etapa > n ? '✓' : n}</div>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: etapa === n ? '#f97316' : etapa > n ? '#aaaaaa' : '#bbbbbb' }}>{label}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: etapa === n ? '#fff7ed' : '#ffffff', border: `1px solid ${etapa === n ? '#f97316' : etapa > n ? '#d0d0d0' : '#cccccc'}` }}>
+                <div style={{ width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', backgroundColor: etapa >= n ? '#f97316' : '#dddddd', color: etapa >= n ? 'white' : '#888888' }}>{etapa > n ? '✓' : n}</div>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: etapa === n ? '#f97316' : etapa > n ? '#999999' : '#666666' }}>{label}</span>
               </div>
               {i < 2 && <div style={{ width: '24px', height: '1px', backgroundColor: '#e8e8e8' }} />}
             </div>
