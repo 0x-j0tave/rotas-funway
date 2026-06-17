@@ -38,6 +38,10 @@ export default function Home() {
   const [rotaSalva, setRotaSalva] = useState(false)
   const [historico, setHistorico] = useState([])
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
+  // Feedback outliers
+  const [outliersMarkados, setOutliersMarkados] = useState(new Set())
+  const [raiosAprendidos, setRaiosAprendidos] = useState({}) // "cidade|ambiente" -> raio_km
+  const [feedbackEnviado, setFeedbackEnviado] = useState(false)
   // Substituição
   const [pontoSubstituindo, setPontoSubstituindo] = useState(null)
   const [candidatosSubstitutos, setCandidatosSubstitutos] = useState([])
@@ -175,10 +179,26 @@ export default function Home() {
     return resultado
   }
 
+  // ── Raios aprendidos ──
+  const carregarRaios = async (cidade) => {
+    try {
+      const res = await fetch(`/api/feedback?cidade=${encodeURIComponent(cidade)}`)
+      const data = await res.json()
+      const mapa = {}
+      if (Array.isArray(data)) {
+        data.forEach(r => { mapa[`${r.cidade}|${r.ambiente}`] = r.raio_maximo_km })
+      }
+      setRaiosAprendidos(mapa)
+      return mapa
+    } catch (e) { return {} }
+  }
+
   // ── Gerar Rota ──
   const gerarRota = async () => {
     setLoading(true)
     setGeocodingProgress('Preparando pontos...')
+    setOutliersMarkados(new Set())
+    setFeedbackEnviado(false)
     try {
       const todosPontos = crossMatch(cidadeSelecionada)
       const acumulado = {}
@@ -217,8 +237,22 @@ export default function Home() {
       if (geocFase1.length === 0) { alert('Nenhum ponto geocodificado.'); setLoading(false); setGeocodingProgress(null); return }
 
       const centroide = { lat: geocFase1.reduce((s, p) => s + p.lat, 0) / geocFase1.length, lng: geocFase1.reduce((s, p) => s + p.lng, 0) / geocFase1.length }
+
+      // Carrega raios aprendidos e filtra pontos da Fase 1 que excedam o raio
+      const raios = await carregarRaios(cidadeSelecionada)
       const acumuladoFinal = {}
-      geocFase1.forEach(p => { acumuladoFinal[p.cod_ponto] = p })
+      geocFase1.forEach(p => {
+        const chave = `${cidadeSelecionada}|${p.ambiente}`
+        const raioMax = raios[chave]
+        if (raioMax) {
+          const dist = distancia(centroide, p)
+          if (dist > raioMax) {
+            console.log(`Ponto filtrado por raio aprendido (${dist.toFixed(1)}km > ${raioMax}km):`, p.endereco)
+            return
+          }
+        }
+        acumuladoFinal[p.cod_ponto] = p
+      })
 
       for (const [ambiente, porMarca] of Object.entries(selecao)) {
         const marcasComCota = Object.entries(porMarca).filter(([, q]) => (parseInt(q) || 0) > 0).map(([m, q]) => ({ nome: m, qtd: parseInt(q) }))
@@ -243,6 +277,42 @@ export default function Home() {
     } catch (err) { alert('Erro: ' + err.message) }
     setLoading(false)
     setGeocodingProgress(null)
+  }
+
+  // ── Feedback outlier ──
+  const marcarOutlier = async (ponto, idx) => {
+    const novosOutliers = new Set(outliersMarkados)
+    if (novosOutliers.has(ponto.cod_ponto)) {
+      novosOutliers.delete(ponto.cod_ponto)
+      setOutliersMarkados(novosOutliers)
+      return
+    }
+    novosOutliers.add(ponto.cod_ponto)
+    setOutliersMarkados(novosOutliers)
+  }
+
+  const enviarFeedback = async () => {
+    if (outliersMarkados.size === 0) return
+    const centroide = {
+      lat: rotaGerada.reduce((s, p) => s + p.lat, 0) / rotaGerada.length,
+      lng: rotaGerada.reduce((s, p) => s + p.lng, 0) / rotaGerada.length
+    }
+    const promises = rotaGerada
+      .filter(p => outliersMarkados.has(p.cod_ponto))
+      .map(p => fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cidade: cidadeSelecionada,
+          ambiente: p.ambiente,
+          cod_ponto: p.cod_ponto,
+          distancia_km: parseFloat(distancia(centroide, p).toFixed(2))
+        })
+      }))
+    await Promise.all(promises)
+    setFeedbackEnviado(true)
+    // Recarrega raios aprendidos
+    await carregarRaios(cidadeSelecionada)
   }
 
   // ── Substituição de ponto ──
@@ -675,18 +745,61 @@ export default function Home() {
                             <span style={{ fontSize: '10px', fontWeight: '700', color: corSob, marginLeft: '2px' }}>{sobreposicao}/{totalMarcas}</span>
                           </div>
                         </div>
-                        <button
-                          onClick={() => iniciarSubstituicao(p, i)}
-                          title="Substituir ponto"
-                          style={{ background: 'none', border: '1px solid #252525', borderRadius: '6px', color: '#6b7280', cursor: 'pointer', padding: '4px 8px', fontSize: '12px', flexShrink: 0 }}
-                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#f97316'; e.currentTarget.style.color = '#f97316' }}
-                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#252525'; e.currentTarget.style.color = '#6b7280' }}
-                        >⇄</button>
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                          <button
+                            onClick={() => marcarOutlier(p, i)}
+                            title={outliersMarkados.has(p.cod_ponto) ? 'Remover flag de outlier' : 'Marcar como outlier (ponto fora do percurso ideal)'}
+                            style={{ background: outliersMarkados.has(p.cod_ponto) ? '#2d0a0a' : 'none', border: `1px solid ${outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#252525'}`, borderRadius: '6px', color: outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
+                            onMouseEnter={e => { if (!outliersMarkados.has(p.cod_ponto)) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444' } }}
+                            onMouseLeave={e => { if (!outliersMarkados.has(p.cod_ponto)) { e.currentTarget.style.borderColor = '#252525'; e.currentTarget.style.color = '#6b7280' } }}
+                          >🚩</button>
+                          <button
+                            onClick={() => iniciarSubstituicao(p, i)}
+                            title="Substituir ponto"
+                            style={{ background: 'none', border: '1px solid #252525', borderRadius: '6px', color: '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = '#f97316'; e.currentTarget.style.color = '#f97316' }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = '#252525'; e.currentTarget.style.color = '#6b7280' }}
+                          >⇄</button>
+                        </div>
                       </div>
                     </div>
                   )
                 })}
               </div>
+
+              {/* Painel de feedback outliers */}
+              {outliersMarkados.size > 0 && !feedbackEnviado && (
+                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#fca5a5', marginBottom: '4px' }}>
+                    🚩 {outliersMarkados.size} ponto{outliersMarkados.size > 1 ? 's' : ''} marcado{outliersMarkados.size > 1 ? 's' : ''} como outlier
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
+                    O sistema vai aprender o raio máximo aceitável para futuras rotas nesta cidade.
+                  </p>
+                  <button onClick={enviarFeedback} style={{ width: '100%', padding: '9px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
+                    Confirmar e ensinar o sistema →
+                  </button>
+                </div>
+              )}
+
+              {feedbackEnviado && (
+                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#052e16', border: '1px solid #166534', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#4ade80' }}>✓ Feedback registrado!</p>
+                  <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>O sistema vai evitar pontos além do raio aprendido nas próximas rotas.</p>
+                </div>
+              )}
+
+              {Object.keys(raiosAprendidos).filter(k => k.startsWith(cidadeSelecionada)).length > 0 && (
+                <div style={{ marginTop: '12px', padding: '12px 14px', backgroundColor: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>🧠 Raios aprendidos</p>
+                  {Object.entries(raiosAprendidos).filter(([k]) => k.startsWith(cidadeSelecionada)).map(([k, raio]) => (
+                    <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>
+                      <span style={{ fontSize: '11px', color: '#6b7280' }}>{k.split('|')[1]?.split(' ')[0]}</span>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#f97316' }}>≤ {raio} km</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
