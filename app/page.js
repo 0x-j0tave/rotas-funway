@@ -2,9 +2,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { parsearExcel } from '@/lib/excel'
 import { otimizarRota, gerarLinkGoogleMaps, distancia } from '@/lib/rota'
-import dynamic from 'next/dynamic'
-
-const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
 
 function normalizarCidade(str) {
   if (!str) return ''
@@ -728,8 +725,12 @@ export default function Home() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '560px', overflowY: 'auto' }}>
                 {rotaGerada.map((p, i) => {
                   const sobreposicao = p.marcas?.length || 0
-                  const totalMarcas = marcas.length
-                  const corSob = sobreposicao === totalMarcas ? '#f97316' : sobreposicao > 1 ? '#fb923c' : '#4b5563'
+                  // Conta só marcas que têm pontos no ambiente deste ponto
+                  const marcasComAmbiente = marcas.filter(m =>
+                    m.pontos.some(pt => pt.ambiente === p.ambiente && (!cidadeSelecionada || pt.cidade === cidadeSelecionada))
+                  ).length
+                  const totalMarcas = marcasComAmbiente || marcas.length
+                  const corSob = sobreposicao === totalMarcas ? '#f97316' : sobreposicao > 1 ? '#fb923c' : '#888888'
                   return (
                     <div key={i} style={{ padding: '10px 12px', backgroundColor: '#f0f0f0', borderRadius: '10px', border: '1px solid #e8e8e8', transition: 'border-color 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.borderColor = '#f97316'}
