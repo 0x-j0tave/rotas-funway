@@ -5,25 +5,23 @@ export default function Mapa({ pontos }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const [aberto, setAberto] = useState(false)
+  const [iniciado, setIniciado] = useState(false)
 
   useEffect(() => {
-    // Reseta quando os pontos mudam
     setAberto(false)
-    if (mapRef.current) {
-      mapRef.current.remove()
-      mapRef.current = null
-    }
+    setIniciado(false)
+    if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
   }, [pontos])
 
   useEffect(() => {
-    if (!aberto || !pontos || pontos.length === 0) return
+    if (!aberto || iniciado || !containerRef.current) return
 
-    // Aguarda o container estar no DOM com tamanho real
-    const timer = setTimeout(() => {
-      if (!containerRef.current) return
+    const el = containerRef.current
 
+    const inicializar = () => {
+      if (mapRef.current) return
       import('leaflet').then(L => {
-        if (mapRef.current) { mapRef.current.remove(); mapRef.current = null }
+        if (mapRef.current) return
 
         delete L.Icon.Default.prototype._getIconUrl
         L.Icon.Default.mergeOptions({
@@ -32,7 +30,7 @@ export default function Mapa({ pontos }) {
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
         })
 
-        const map = L.map(containerRef.current)
+        const map = L.map(el, { zoomControl: true })
         mapRef.current = map
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -53,21 +51,31 @@ export default function Mapa({ pontos }) {
 
         L.polyline(bounds, { color: '#f97316', weight: 3, opacity: 0.8, dashArray: '8,5' }).addTo(map)
         map.fitBounds(bounds, { padding: [40, 40] })
-        map.invalidateSize()
+        setIniciado(true)
       })
-    }, 300)
+    }
 
-    return () => clearTimeout(timer)
-  }, [aberto, pontos])
+    // Usa ResizeObserver — só inicializa quando o container tem largura real
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+          observer.disconnect()
+          inicializar()
+        }
+      }
+    })
+
+    observer.observe(el)
+
+    return () => observer.disconnect()
+  }, [aberto, iniciado, pontos])
 
   if (!aberto) {
     return (
-      <div style={{ width: '100%', height: '480px', backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-        <span style={{ fontSize: '32px' }}>🗺️</span>
-        <p style={{ fontSize: '14px', color: '#888', fontWeight: '500' }}>Rota com {pontos?.length} pontos gerada</p>
-        <button
-          onClick={() => setAberto(true)}
-          style={{ padding: '10px 24px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
+      <div style={{ width: '100%', height: '420px', backgroundColor: '#f7f7f7', border: '1px solid #e8e8e8', borderRadius: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+        <span style={{ fontSize: '36px' }}>🗺️</span>
+        <p style={{ fontSize: '14px', color: '#888', fontWeight: '500', margin: 0 }}>{pontos?.length} pontos na rota</p>
+        <button onClick={() => setAberto(true)} style={{ padding: '10px 28px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>
           Visualizar mapa
         </button>
       </div>
@@ -75,7 +83,7 @@ export default function Mapa({ pontos }) {
   }
 
   return (
-    <div style={{ width: '100%', height: '480px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e8e8e8', position: 'relative' }}>
+    <div style={{ width: '100%', height: '420px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e8e8e8' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
     </div>
   )
