@@ -6,8 +6,20 @@ import dynamic from 'next/dynamic'
 
 const Mapa = dynamic(() => import('@/components/Mapa'), { ssr: false })
 
+function normalizarCidade(str) {
+  if (!str) return ''
+  return str.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+    .split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 function extrairCidades(pontos) {
-  return [...new Set(pontos.map(p => p.cidade).filter(Boolean))].sort()
+  const mapa = {}
+  pontos.forEach(p => {
+    if (!p.cidade) return
+    const chave = normalizarCidade(p.cidade)
+    if (!mapa[chave]) mapa[chave] = chave
+  })
+  return Object.values(mapa).sort()
 }
 
 const CORES_MARCAS = ['#f97316','#3b82f6','#10b981','#ec4899','#8b5cf6','#06b6d4','#eab308','#ef4444']
@@ -112,7 +124,7 @@ export default function Home() {
   const crossMatch = useCallback((cidade) => {
     const mapa = {}
     marcas.forEach(marca => {
-      marca.pontos.filter(p => !cidade || p.cidade === cidade).forEach(p => {
+      marca.pontos.filter(p => !cidade || normalizarCidade(p.cidade) === normalizarCidade(cidade)).forEach(p => {
         const key = p.cod_ponto
         if (!key) return
         if (!mapa[key]) mapa[key] = { ...p, marcas: [] }
@@ -125,7 +137,7 @@ export default function Home() {
   const handleCidade = (cidade) => {
     setCidadeSelecionada(cidade)
     const todosPontos = marcas.flatMap(m => m.pontos)
-    const filtrados = cidade ? todosPontos.filter(p => p.cidade === cidade) : todosPontos
+    const filtrados = cidade ? todosPontos.filter(p => normalizarCidade(p.cidade) === normalizarCidade(cidade)) : todosPontos
     setAmbientesDisponiveis([...new Set(filtrados.map(p => p.ambiente).filter(Boolean))].sort())
     setSelecao({})
   }
