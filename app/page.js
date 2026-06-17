@@ -377,29 +377,29 @@ export default function Home() {
   }
 
   const s = { // shared styles
-    card: { backgroundColor: '#161616', border: '1px solid #252525', borderRadius: '16px', padding: '24px' },
-    cardSm: { backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '12px', padding: '14px 16px' },
-    label: { fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
-    input: { width: '100%', padding: '10px 14px', backgroundColor: '#0d0d0d', border: '1px solid #252525', borderRadius: '8px', color: '#e5e5e5', fontSize: '13px', outline: 'none' },
+    card: { backgroundColor: '#ffffff', border: '1px solid #e0e0e0', borderRadius: '16px', padding: '24px' },
+    cardSm: { backgroundColor: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: '12px', padding: '14px 16px' },
+    label: { fontSize: '11px', fontWeight: '700', color: '#888888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'block' },
+    input: { width: '100%', padding: '10px 14px', backgroundColor: '#f0f0f0', border: '1px solid #e0e0e0', borderRadius: '8px', color: '#1a1a1a', fontSize: '13px', outline: 'none' },
     btnPrimary: { padding: '12px 20px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: '10px', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', letterSpacing: '0.02em' },
-    btnSecondary: { padding: '10px 16px', backgroundColor: 'transparent', border: '1px solid #252525', borderRadius: '10px', color: '#9ca3af', fontSize: '13px', fontWeight: '500', cursor: 'pointer' },
+    btnSecondary: { padding: '10px 16px', backgroundColor: 'transparent', border: '1px solid #e0e0e0', borderRadius: '10px', color: '#777777', fontSize: '13px', fontWeight: '500', cursor: 'pointer' },
     badge: (cor) => ({ fontSize: '11px', padding: '3px 10px', borderRadius: '20px', fontWeight: '600', backgroundColor: cor + '20', color: cor, border: `1px solid ${cor}40` }),
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#0d0d0d', color: '#e5e5e5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#f0f0f0', color: '#1a1a1a' }}>
 
       {/* Header */}
-      <div style={{ backgroundColor: '#111', borderBottom: '1px solid #1f1f1f', padding: '0 32px' }}>
+      <div style={{ backgroundColor: '#f0f0f0', borderBottom: '1px solid #e8e8e8', padding: '0 32px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img src="/funway-logo.png" alt="Funway" style={{ height: '32px', width: '32px', objectFit: 'contain' }} />
             <div style={{ width: '1px', height: '20px', backgroundColor: '#2a2a2a' }} />
-            <span style={{ fontSize: '12px', fontWeight: '700', color: '#d1d5db', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Descomplicando Rotas</span>
+            <span style={{ fontSize: '12px', fontWeight: '700', color: '#222222', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Rotas Funway</span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={carregarExcels} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px' }}>📂 Listas salvas</button>
-            <button onClick={carregarHistorico} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px' }}>🕐 Histórico</button>
+            <button onClick={carregarExcels} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px', backgroundColor: '#f7f7f7' }}>📂 Listas salvas</button>
+            <button onClick={carregarHistorico} style={{ ...s.btnSecondary, fontSize: '12px', padding: '7px 14px', backgroundColor: '#f7f7f7' }}>🕐 Histórico</button>
           </div>
         </div>
       </div>
@@ -412,13 +412,13 @@ export default function Home() {
             <div style={{ ...s.card, width: '100%', maxWidth: '600px', maxHeight: '80vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#f1f5f9' }}>Listas salvas</h2>
+                  <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#111111' }}>Listas salvas</h2>
                   <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>Arquivos ficam disponíveis por 7 dias</p>
                 </div>
                 <button onClick={() => setMostrarExcels(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '20px' }}>✕</button>
               </div>
               {excelsSalvos.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: '#4b5563' }}>
+                <div style={{ textAlign: 'center', padding: '40px', color: '#888888' }}>
                   <div style={{ fontSize: '32px', marginBottom: '8px' }}>📭</div>
                   <p style={{ fontSize: '13px' }}>Nenhuma lista salva ainda.</p>
                   <p style={{ fontSize: '12px', marginTop: '4px' }}>Ao fazer upload, marque "Salvar por 7 dias".</p>
@@ -431,7 +431,7 @@ export default function Home() {
                       <div key={e.id} style={{ ...s.cardSm, display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: dias <= 1 ? '#ef4444' : dias <= 3 ? '#f97316' : '#10b981', flexShrink: 0 }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '13px', fontWeight: '600', color: '#e5e5e5' }}>{e.nome_marca}</p>
+                          <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a' }}>{e.nome_marca}</p>
                           <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{e.nome_arquivo} · {e.total_pontos} pontos · {e.cidades?.join(', ')}</p>
                           <p style={{ fontSize: '10px', color: dias <= 1 ? '#ef4444' : dias <= 3 ? '#f97316' : '#6b7280', marginTop: '2px' }}>
                             {dias === 0 ? 'Expira hoje' : `${dias} dia${dias > 1 ? 's' : ''} restante${dias > 1 ? 's' : ''}`}
@@ -455,15 +455,15 @@ export default function Home() {
           <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '24px' }}>
             <div style={{ ...s.card, width: '100%', maxWidth: '560px', maxHeight: '80vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#f1f5f9' }}>Rotas salvas</h2>
+                <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#111111' }}>Rotas salvas</h2>
                 <button onClick={() => setMostrarHistorico(false)} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '20px' }}>✕</button>
               </div>
-              {historico.length === 0 ? <p style={{ color: '#4b5563', fontSize: '13px' }}>Nenhuma rota salva.</p> : (
+              {historico.length === 0 ? <p style={{ color: '#888888', fontSize: '13px' }}>Nenhuma rota salva.</p> : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {historico.map(r => (
                     <div key={r.id} style={{ ...s.cardSm, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div>
-                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#e5e5e5' }}>{r.nome}</p>
+                        <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a' }}>{r.nome}</p>
                         <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{r.cidade} · {new Date(r.criado_em).toLocaleDateString('pt-BR')} · {r.pontos_json?.length} pontos</p>
                       </div>
                       <button onClick={() => { setRotaGerada(r.pontos_json); setLinkMaps(gerarLinkGoogleMaps(r.pontos_json)); setCidadeSelecionada(r.cidade); setEtapa(3); setMostrarHistorico(false) }}
@@ -482,11 +482,11 @@ export default function Home() {
             <div style={{ ...s.card, width: '100%', maxWidth: '600px', maxHeight: '85vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                 <div>
-                  <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#f1f5f9' }}>Substituir ponto #{pontoSubstituindo.idx + 1}</h2>
+                  <h2 style={{ fontSize: '15px', fontWeight: '700', color: '#111111' }}>Substituir ponto #{pontoSubstituindo.idx + 1}</h2>
                   <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
                     {pontoSubstituindo.ponto.nome_ponto || pontoSubstituindo.ponto.endereco}
                   </p>
-                  <p style={{ fontSize: '11px', color: '#4b5563', marginTop: '2px' }}>{pontoSubstituindo.ponto.ambiente}</p>
+                  <p style={{ fontSize: '11px', color: '#888888', marginTop: '2px' }}>{pontoSubstituindo.ponto.ambiente}</p>
                 </div>
                 <button onClick={() => { setPontoSubstituindo(null); setCandidatosSubstitutos([]) }} style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: '20px' }}>✕</button>
               </div>
@@ -497,23 +497,23 @@ export default function Home() {
                   <p style={{ fontSize: '13px' }}>Buscando candidatos próximos...</p>
                 </div>
               ) : candidatosSubstitutos.length === 0 ? (
-                <p style={{ color: '#4b5563', fontSize: '13px', textAlign: 'center', padding: '32px' }}>Nenhum substituto disponível para este ponto.</p>
+                <p style={{ color: '#888888', fontSize: '13px', textAlign: 'center', padding: '32px' }}>Nenhum substituto disponível para este ponto.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '4px' }}>Ordenados por proximidade ao ponto atual — {candidatosSubstitutos.length} candidatos</p>
                   {candidatosSubstitutos.map((p, i) => {
                     const dist = distancia(pontoSubstituindo.ponto, p)
                     return (
-                      <div key={p.cod_ponto} style={{ ...s.cardSm, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+                      <div key={p.cod_ponto} style={{ ...s.cardSm, display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'border-color 0.15s', backgroundColor: '#f9f9f9' }}
                         onMouseEnter={e => e.currentTarget.style.borderColor = '#f97316'}
-                        onMouseLeave={e => e.currentTarget.style.borderColor = '#252525'}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#1f1f1f', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#9ca3af', flexShrink: 0 }}>{i + 1}</div>
+                        onMouseLeave={e => e.currentTarget.style.borderColor = '#ebebeb'}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#e8e8e8', border: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#777777', flexShrink: 0 }}>{i + 1}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '13px', fontWeight: '600', color: '#e5e5e5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nome_ponto || p.endereco}</p>
+                          <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nome_ponto || p.endereco}</p>
                           <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.endereco}</p>
                           <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                             {p.marcas?.map(m => <span key={m} style={s.badge(corMarca(m))}>{m}</span>)}
-                            <span style={{ fontSize: '10px', color: '#4b5563' }}>{dist.toFixed(1)} km</span>
+                            <span style={{ fontSize: '10px', color: '#888888' }}>{dist.toFixed(1)} km</span>
                           </div>
                         </div>
                         <button onClick={() => confirmarSubstituicao(p)} style={{ ...s.btnPrimary, padding: '7px 14px', fontSize: '12px', flexShrink: 0 }}>Usar</button>
@@ -530,11 +530,11 @@ export default function Home() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '28px' }}>
           {[{ n: 1, label: 'Upload' }, { n: 2, label: 'Parâmetros' }, { n: 3, label: 'Rota' }].map(({ n, label }, i) => (
             <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: etapa === n ? '#1c0a00' : etapa > n ? '#0d0d0d' : '#0d0d0d', border: `1px solid ${etapa === n ? '#f97316' : etapa > n ? '#252525' : '#1f1f1f'}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: etapa === n ? '#fff7ed' : '#f0f0f0', border: `1px solid ${etapa === n ? '#f97316' : '#e0e0e0'}` }}>
                 <div style={{ width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', backgroundColor: etapa >= n ? '#f97316' : '#1f1f1f', color: etapa >= n ? 'white' : '#4b5563' }}>{etapa > n ? '✓' : n}</div>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: etapa === n ? '#f97316' : etapa > n ? '#6b7280' : '#4b5563' }}>{label}</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: etapa === n ? '#f97316' : etapa > n ? '#aaaaaa' : '#bbbbbb' }}>{label}</span>
               </div>
-              {i < 2 && <div style={{ width: '24px', height: '1px', backgroundColor: '#1f1f1f' }} />}
+              {i < 2 && <div style={{ width: '24px', height: '1px', backgroundColor: '#e8e8e8' }} />}
             </div>
           ))}
           {marcas.length > 0 && (
@@ -551,7 +551,7 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: marcas.length > 0 ? '1fr 380px' : '1fr', gap: '16px' }}>
             <div style={s.card}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#f1f5f9' }}>Upload das listas</h2>
+                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Upload das listas</h2>
                 <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>Suba um Excel por marca. Use "Listas salvas" para reutilizar uploads anteriores.</p>
               </div>
 
@@ -559,7 +559,7 @@ export default function Home() {
                 <div key={marca.nome} style={{ ...s.cardSm, display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                   <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: CORES_MARCAS[idx % CORES_MARCAS.length], flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: '13px', fontWeight: '600', color: '#e5e5e5' }}>{marca.nome}</p>
+                    <p style={{ fontSize: '13px', fontWeight: '600', color: '#1a1a1a' }}>{marca.nome}</p>
                     <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>{marca.pontos.length.toLocaleString()} pontos</p>
                   </div>
                   <button onClick={() => setMarcas(prev => { const novas = prev.filter(m => m.nome !== marca.nome); setCidadesDisponiveis(extrairCidades(novas.flatMap(m => m.pontos))); return novas })}
@@ -581,17 +581,17 @@ export default function Home() {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', color: '#6b7280' }}>Total de pontos</span>
-                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#e5e5e5' }}>{marcas.reduce((s, m) => s + m.pontos.length, 0).toLocaleString()}</span>
+                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a1a' }}>{marcas.reduce((s, m) => s + m.pontos.length, 0).toLocaleString()}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '12px', color: '#6b7280' }}>Cidades</span>
-                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#e5e5e5' }}>{cidadesDisponiveis.length}</span>
+                      <span style={{ fontSize: '16px', fontWeight: '700', color: '#1a1a1a' }}>{cidadesDisponiveis.length}</span>
                     </div>
                   </div>
-                  <div style={{ height: '1px', backgroundColor: '#1f1f1f', margin: '16px 0' }} />
+                  <div style={{ height: '1px', backgroundColor: '#e8e8e8', margin: '16px 0' }} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {cidadesDisponiveis.map(c => (
-                      <div key={c} style={{ fontSize: '12px', color: '#4b5563', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>{c}</div>
+                      <div key={c} style={{ fontSize: '12px', color: '#888888', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>{c}</div>
                     ))}
                   </div>
                 </div>
@@ -608,13 +608,13 @@ export default function Home() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '16px', alignItems: 'start' }}>
             <div style={s.card}>
               <div style={{ marginBottom: '20px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#f1f5f9' }}>Parâmetros da rota</h2>
+                <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Parâmetros da rota</h2>
                 <p style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>Defina quantos pontos de cada marca e ativo deseja na rota.</p>
               </div>
 
               <div style={{ marginBottom: '24px' }}>
                 <label style={s.label}>Cidade</label>
-                <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)} style={{ ...s.input, cursor: 'pointer' }}>
+                <select value={cidadeSelecionada} onChange={e => handleCidade(e.target.value)} style={{ ...s.input, cursor: 'pointer', backgroundColor: '#f7f7f7', color: '#1a1a1a' }}>
                   <option value="">Selecione uma cidade</option>
                   {cidadesDisponiveis.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
@@ -623,8 +623,8 @@ export default function Home() {
               {cidadeSelecionada && ambientesDisponiveis.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {ambientesDisponiveis.map(amb => (
-                    <div key={amb} style={{ backgroundColor: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '12px', overflow: 'hidden' }}>
-                      <div style={{ padding: '10px 16px', borderBottom: '1px solid #1f1f1f', backgroundColor: '#111' }}>
+                    <div key={amb} style={{ backgroundColor: '#f0f0f0', border: '1px solid #e8e8e8', borderRadius: '12px', overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 16px', borderBottom: '1px solid #e8e8e8', backgroundColor: '#f0f0f0' }}>
                         <p style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{amb}</p>
                       </div>
                       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -636,11 +636,11 @@ export default function Home() {
                             <div key={marca.nome} style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: disponiveis === 0 ? 0.3 : 1 }}>
                               <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: cor, flexShrink: 0 }} />
                               <div style={{ flex: 1 }}>
-                                <span style={{ fontSize: '13px', color: '#e5e5e5', fontWeight: '500' }}>{marca.nome}</span>
-                                <span style={{ fontSize: '11px', color: '#4b5563', marginLeft: '8px' }}>{disponiveis} disponíveis</span>
+                                <span style={{ fontSize: '13px', color: '#1a1a1a', fontWeight: '500' }}>{marca.nome}</span>
+                                <span style={{ fontSize: '11px', color: '#888888', marginLeft: '8px' }}>{disponiveis} disponíveis</span>
                               </div>
                               <input type="number" min="0" max={disponiveis} value={val || ''} onChange={e => setQtd(amb, marca.nome, e.target.value)} disabled={disponiveis === 0} placeholder="0"
-                                style={{ width: '60px', padding: '6px', textAlign: 'center', backgroundColor: '#161616', border: `1px solid ${val > 0 ? cor : '#252525'}`, borderRadius: '8px', color: val > 0 ? cor : '#9ca3af', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
+                                style={{ width: '60px', padding: '6px', textAlign: 'center', backgroundColor: '#ffffff', border: `1px solid ${val > 0 ? cor : '#252525'}`, borderRadius: '8px', color: val > 0 ? cor : '#aaaaaa', fontSize: '14px', fontWeight: '700', outline: 'none' }} />
                             </div>
                           )
                         })}
@@ -656,27 +656,27 @@ export default function Home() {
               <div style={s.card}>
                 <h3 style={{ fontSize: '11px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '16px' }}>Resumo da seleção</h3>
                 {totalPontos === 0 ? (
-                  <p style={{ fontSize: '12px', color: '#4b5563', textAlign: 'center', padding: '16px 0' }}>Nenhum ponto selecionado ainda</p>
+                  <p style={{ fontSize: '12px', color: '#888888', textAlign: 'center', padding: '16px 0' }}>Nenhum ponto selecionado ainda</p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {Object.entries(selecao).map(([amb, porMarca]) => {
                       const total = Object.values(porMarca).reduce((a, b) => a + (parseInt(b) || 0), 0)
                       if (total === 0) return null
                       return (
-                        <div key={amb} style={{ padding: '10px 12px', backgroundColor: '#0d0d0d', borderRadius: '8px', border: '1px solid #1f1f1f' }}>
+                        <div key={amb} style={{ padding: '10px 12px', backgroundColor: '#f0f0f0', borderRadius: '8px', border: '1px solid #e8e8e8' }}>
                           <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '6px', fontWeight: '600' }}>{amb}</p>
                           {Object.entries(porMarca).filter(([, q]) => (parseInt(q) || 0) > 0).map(([m, q]) => (
                             <div key={m} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                              <span style={{ fontSize: '12px', color: '#9ca3af' }}>{m}</span>
+                              <span style={{ fontSize: '12px', color: '#777777' }}>{m}</span>
                               <span style={{ fontSize: '12px', fontWeight: '700', color: '#f97316' }}>{q}</span>
                             </div>
                           ))}
                         </div>
                       )
                     })}
-                    <div style={{ padding: '10px 12px', backgroundColor: '#1c0a00', borderRadius: '8px', border: '1px solid #9a3412', marginTop: '4px' }}>
+                    <div style={{ padding: '10px 12px', backgroundColor: '#fff7ed', borderRadius: '8px', border: '1px solid #fdba74', marginTop: '4px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '12px', color: '#fb923c' }}>Total estimado</span>
+                        <span style={{ fontSize: '12px', color: '#ea580c' }}>Total estimado</span>
                         <span style={{ fontSize: '16px', fontWeight: '800', color: '#f97316' }}>{totalPontos}</span>
                       </div>
                     </div>
@@ -699,7 +699,7 @@ export default function Home() {
               <div style={s.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div>
-                    <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#f1f5f9' }}>Rota gerada</h2>
+                    <h2 style={{ fontSize: '17px', fontWeight: '700', color: '#111111' }}>Rota gerada</h2>
                     <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>{cidadeSelecionada} · {rotaGerada.length} pontos únicos</p>
                   </div>
                   <div style={{ display: 'flex', gap: '8px' }}>
@@ -707,11 +707,11 @@ export default function Home() {
                     <button onClick={salvarRota} disabled={rotaSalva} style={{ ...s.btnPrimary, fontSize: '12px', padding: '7px 14px', opacity: rotaSalva ? 0.5 : 1 }}>{rotaSalva ? '✓ Salva' : 'Salvar'}</button>
                   </div>
                 </div>
-                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #252525', height: '480px' }}>
+                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e0e0e0', height: '480px' }}>
                   <Mapa pontos={rotaGerada} />
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
-                  <a href={linkMaps} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '11px', backgroundColor: '#052e16', border: '1px solid #14532d', borderRadius: '10px', color: '#4ade80', fontSize: '13px', fontWeight: '700', textAlign: 'center', textDecoration: 'none' }}>
+                  <a href={linkMaps} target="_blank" rel="noopener noreferrer" style={{ flex: 1, padding: '11px', backgroundColor: '#f0fdf4', border: '1px solid #14532d', borderRadius: '10px', color: '#16a34a', fontSize: '13px', fontWeight: '700', textAlign: 'center', textDecoration: 'none' }}>
                     🗺️ Abrir no Google Maps
                   </a>
                   <button onClick={exportarCSV} style={{ ...s.btnSecondary, flex: 1, padding: '11px', fontSize: '13px' }}>📥 Exportar CSV</button>
@@ -723,7 +723,7 @@ export default function Home() {
             <div style={s.card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <h3 style={{ fontSize: '12px', fontWeight: '700', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pontos da rota</h3>
-                <span style={{ fontSize: '11px', color: '#4b5563' }}>{rotaGerada.length} pontos</span>
+                <span style={{ fontSize: '11px', color: '#888888' }}>{rotaGerada.length} pontos</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '560px', overflowY: 'auto' }}>
                 {rotaGerada.map((p, i) => {
@@ -731,16 +731,16 @@ export default function Home() {
                   const totalMarcas = marcas.length
                   const corSob = sobreposicao === totalMarcas ? '#f97316' : sobreposicao > 1 ? '#fb923c' : '#4b5563'
                   return (
-                    <div key={i} style={{ padding: '10px 12px', backgroundColor: '#0d0d0d', borderRadius: '10px', border: '1px solid #1f1f1f', transition: 'border-color 0.15s' }}
-                      onMouseEnter={e => e.currentTarget.style.borderColor = '#333'}
-                      onMouseLeave={e => e.currentTarget.style.borderColor = '#1f1f1f'}>
+                    <div key={i} style={{ padding: '10px 12px', backgroundColor: '#f0f0f0', borderRadius: '10px', border: '1px solid #e8e8e8', transition: 'border-color 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = '#f97316'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = '#ebebeb'}>
                       <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                         <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: 'white', fontSize: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{i + 1}</div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ fontSize: '12px', fontWeight: '600', color: '#e5e5e5', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nome_ponto || p.endereco}</p>
-                          <p style={{ fontSize: '11px', color: '#4b5563', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.endereco}</p>
+                          <p style={{ fontSize: '12px', fontWeight: '600', color: '#1a1a1a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nome_ponto || p.endereco}</p>
+                          <p style={{ fontSize: '11px', color: '#888888', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.endereco}</p>
                           <div style={{ display: 'flex', gap: '4px', marginTop: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
-                            <span style={{ fontSize: '10px', backgroundColor: '#1c0a00', color: '#fb923c', padding: '2px 7px', borderRadius: '12px', fontWeight: '600' }}>{p.ambiente?.split(' ')[0]}</span>
+                            <span style={{ fontSize: '10px', backgroundColor: '#fff7ed', color: '#ea580c', padding: '2px 7px', borderRadius: '12px', fontWeight: '600' }}>{p.ambiente?.split(' ')[0]}</span>
                             {p.marcas?.map(m => <span key={m} style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '12px', fontWeight: '600', backgroundColor: corMarca(m) + '20', color: corMarca(m) }}>{m}</span>)}
                             <span style={{ fontSize: '10px', fontWeight: '700', color: corSob, marginLeft: '2px' }}>{sobreposicao}/{totalMarcas}</span>
                           </div>
@@ -749,14 +749,14 @@ export default function Home() {
                           <button
                             onClick={() => marcarOutlier(p, i)}
                             title={outliersMarkados.has(p.cod_ponto) ? 'Remover flag de outlier' : 'Marcar como outlier (ponto fora do percurso ideal)'}
-                            style={{ background: outliersMarkados.has(p.cod_ponto) ? '#2d0a0a' : 'none', border: `1px solid ${outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#252525'}`, borderRadius: '6px', color: outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
+                            style={{ background: outliersMarkados.has(p.cod_ponto) ? '#2d0a0a' : 'none', border: `1px solid ${outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#e0e0e0'}`, borderRadius: '6px', color: outliersMarkados.has(p.cod_ponto) ? '#ef4444' : '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
                             onMouseEnter={e => { if (!outliersMarkados.has(p.cod_ponto)) { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ef4444' } }}
                             onMouseLeave={e => { if (!outliersMarkados.has(p.cod_ponto)) { e.currentTarget.style.borderColor = '#252525'; e.currentTarget.style.color = '#6b7280' } }}
                           >🚩</button>
                           <button
                             onClick={() => iniciarSubstituicao(p, i)}
                             title="Substituir ponto"
-                            style={{ background: 'none', border: '1px solid #252525', borderRadius: '6px', color: '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
+                            style={{ background: 'none', border: '1px solid #e0e0e0', borderRadius: '6px', color: '#6b7280', cursor: 'pointer', padding: '4px 7px', fontSize: '12px' }}
                             onMouseEnter={e => { e.currentTarget.style.borderColor = '#f97316'; e.currentTarget.style.color = '#f97316' }}
                             onMouseLeave={e => { e.currentTarget.style.borderColor = '#252525'; e.currentTarget.style.color = '#6b7280' }}
                           >⇄</button>
@@ -769,8 +769,8 @@ export default function Home() {
 
               {/* Painel de feedback outliers */}
               {outliersMarkados.size > 0 && !feedbackEnviado && (
-                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#1a0a0a', border: '1px solid #7f1d1d', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#fca5a5', marginBottom: '4px' }}>
+                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#fff5f5', border: '1px solid #fca5a5', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#dc2626', marginBottom: '4px' }}>
                     🚩 {outliersMarkados.size} ponto{outliersMarkados.size > 1 ? 's' : ''} marcado{outliersMarkados.size > 1 ? 's' : ''} como outlier
                   </p>
                   <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
@@ -783,15 +783,15 @@ export default function Home() {
               )}
 
               {feedbackEnviado && (
-                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#052e16', border: '1px solid #166534', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#4ade80' }}>✓ Feedback registrado!</p>
+                <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#f0fdf4', border: '1px solid #86efac', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '12px', fontWeight: '600', color: '#16a34a' }}>✓ Feedback registrado!</p>
                   <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px' }}>O sistema vai evitar pontos além do raio aprendido nas próximas rotas.</p>
                 </div>
               )}
 
               {Object.keys(raiosAprendidos).filter(k => k.startsWith(cidadeSelecionada)).length > 0 && (
-                <div style={{ marginTop: '12px', padding: '12px 14px', backgroundColor: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '10px' }}>
-                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>🧠 Raios aprendidos</p>
+                <div style={{ marginTop: '12px', padding: '12px 14px', backgroundColor: '#f0f0f0', border: '1px solid #e8e8e8', borderRadius: '10px' }}>
+                  <p style={{ fontSize: '11px', fontWeight: '700', color: '#888888', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>🧠 Raios aprendidos</p>
                   {Object.entries(raiosAprendidos).filter(([k]) => k.startsWith(cidadeSelecionada)).map(([k, raio]) => (
                     <div key={k} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: '1px solid #1a1a1a' }}>
                       <span style={{ fontSize: '11px', color: '#6b7280' }}>{k.split('|')[1]?.split(' ')[0]}</span>
@@ -806,7 +806,7 @@ export default function Home() {
 
         {etapa === 3 && (
           <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
-            style={{ color: '#4b5563', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '16px 0', display: 'block', width: '100%', textAlign: 'center' }}>
+            style={{ color: '#888888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '16px 0', display: 'block', width: '100%', textAlign: 'center' }}>
             + Nova rota do zero
           </button>
         )}
@@ -852,8 +852,8 @@ function AddMarca({ onAdd }) {
   }
 
   return (
-    <div style={{ border: '1px dashed #252525', borderRadius: '12px', padding: '16px', marginTop: '8px' }}>
-      <p style={{ fontSize: '11px', fontWeight: '700', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Adicionar marcas</p>
+    <div style={{ border: '1px dashed #d0d0d0', borderRadius: '12px', padding: '16px', marginTop: '8px' }}>
+      <p style={{ fontSize: '11px', fontWeight: '700', color: '#888888', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '12px' }}>Adicionar marcas</p>
 
       {/* Drop zone */}
       <label
@@ -863,7 +863,7 @@ function AddMarca({ onAdd }) {
         style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
           gap: '8px', padding: '24px', marginBottom: arquivos.length > 0 ? '14px' : '0',
-          backgroundColor: arrastando ? '#1c0a00' : '#0d0d0d',
+          backgroundColor: arrastando ? '#fff7ed' : '#f7f7f7',
           border: `2px dashed ${arrastando ? '#f97316' : '#252525'}`,
           borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s'
         }}>
@@ -871,7 +871,7 @@ function AddMarca({ onAdd }) {
         <span style={{ fontSize: '13px', color: arrastando ? '#f97316' : '#6b7280', fontWeight: '500' }}>
           {arrastando ? 'Solte os arquivos aqui' : 'Arraste os Excels ou clique para selecionar'}
         </span>
-        <span style={{ fontSize: '11px', color: '#4b5563' }}>Você pode subir vários de uma vez</span>
+        <span style={{ fontSize: '11px', color: '#888888' }}>Você pode subir vários de uma vez</span>
         <input type="file" accept=".xlsx,.xls,.csv" multiple style={{ display: 'none' }}
           onChange={e => adicionarArquivos(e.target.files)} />
       </label>
@@ -880,10 +880,10 @@ function AddMarca({ onAdd }) {
       {arquivos.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
           {arquivos.map(a => (
-            <div key={a.id} style={{ backgroundColor: '#0d0d0d', border: '1px solid #1f1f1f', borderRadius: '10px', padding: '12px' }}>
+            <div key={a.id} style={{ backgroundColor: '#f0f0f0', border: '1px solid #e8e8e8', borderRadius: '10px', padding: '12px' }}>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', color: '#4b5563', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📄 {a.file.name}</span>
-                <button onClick={() => remover(a.id)} style={{ background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>✕</button>
+                <span style={{ fontSize: '12px', color: '#888888', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📄 {a.file.name}</span>
+                <button onClick={() => remover(a.id)} style={{ background: 'none', border: 'none', color: '#888888', cursor: 'pointer', fontSize: '14px', padding: '0 4px' }}>✕</button>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
@@ -891,7 +891,7 @@ function AddMarca({ onAdd }) {
                   placeholder="Nome da marca (ex: Guaraná)"
                   value={a.nome}
                   onChange={e => atualizar(a.id, 'nome', e.target.value)}
-                  style={{ flex: 1, minWidth: '160px', padding: '7px 10px', backgroundColor: '#161616', border: `1px solid ${a.nome.trim() ? '#f97316' : '#252525'}`, borderRadius: '7px', color: '#e5e5e5', fontSize: '13px', fontWeight: '600', outline: 'none' }}
+                  style={{ flex: 1, minWidth: '160px', padding: '7px 10px', backgroundColor: '#ffffff', border: `1px solid ${a.nome.trim() ? '#f97316' : '#252525'}`, borderRadius: '7px', color: '#1a1a1a', fontSize: '13px', fontWeight: '600', outline: 'none' }}
                 />
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input type="checkbox" checked={a.salvar} onChange={e => atualizar(a.id, 'salvar', e.target.checked)}
