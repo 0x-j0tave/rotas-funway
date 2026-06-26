@@ -35,8 +35,10 @@ export default function Home() {
   const [rotaSalva, setRotaSalva] = useState(false)
   const [historico, setHistorico] = useState([])
   const [mostrarHistorico, setMostrarHistorico] = useState(false)
-  // Feedback outliers
+  // Feedback outliers e bloqueios de sessão
   const [outliersMarkados, setOutliersMarkados] = useState(new Set())
+  const [codsBloqueadosSessao, setCodsBloqueadosSessao] = useState(new Set())
+  const [gerandoVariacao, setGerandoVariacao] = useState(false)
   const [raiosAprendidos, setRaiosAprendidos] = useState({}) // "cidade|ambiente" -> raio_km
   const [feedbackEnviado, setFeedbackEnviado] = useState(false)
   // Substituição
@@ -282,10 +284,88 @@ export default function Home() {
     if (novosOutliers.has(ponto.cod_ponto)) {
       novosOutliers.delete(ponto.cod_ponto)
       setOutliersMarkados(novosOutliers)
+    } else {
+      novosOutliers.add(ponto.cod_ponto)
+      setOutliersMarkados(novosOutliers)
+    }
+  }
+
+  // Gera variação da rota: mantém pontos não flagados, substitui os flagados
+  const gerarVariacao = async () => {
+    if (outliersMarkados.size === 0) {
+      alert('Marque com 🚩 os pontos que deseja substituir antes de gerar uma variação.')
       return
     }
-    novosOutliers.add(ponto.cod_ponto)
-    setOutliersMarkados(novosOutliers)
+
+    setGerandoVariacao(true)
+    setGeocodingProgress('Gerando variação...')
+
+    try {
+      // Acumula todos os cods bloqueados nesta sessão
+      const novosBloqueados = new Set([...codsBloqueadosSessao, ...outliersMarkados])
+      setCodsBloqueadosSessao(novosBloqueados)
+
+      // Pontos que ficam (não flagados)
+      const pontosFixos = rotaGerada.filter(p => !outliersMarkados.has(p.cod_ponto))
+
+      // Para cada ponto flagado, busca substituto do mesmo ambiente+marca
+      // excluindo todos os bloqueados desta sessão
+      const todosPontos = crossMatch(cidadeSelecionada)
+      const codsJaNaRota = new Set(pontosFixos.map(p => p.cod_ponto))
+      const novosAcumulados = {}
+      pontosFixos.forEach(p => { novosAcumulados[p.cod_ponto] = p })
+
+      const pontosParaSubstituir = rotaGerada.filter(p => outliersMarkados.has(p.cod_ponto))
+
+      // Calcula centroide dos pontos fixos para proximidade
+      const centroide = pontosFixos.length > 0
+        ? { lat: pontosFixos.reduce((s, p) => s + p.lat, 0) / pontosFixos.length, lng: pontosFixos.reduce((s, p) => s + p.lng, 0) / pontosFixos.length }
+        : null
+
+      for (const pontoFlagado of pontosParaSubstituir) {
+        const candidatos = todosPontos.filter(p =>
+          p.ambiente === pontoFlagado.ambiente &&
+          p.marcas.some(m => pontoFlagado.marcas?.includes(m)) &&
+          !novosBloqueados.has(p.cod_ponto) &&
+          !codsJaNaRota.has(p.cod_ponto)
+        ).sort((a, b) => b.marcas.length - a.marcas.length)
+
+        if (candidatos.length === 0) {
+          console.warn('Sem substituto para:', pontoFlagado.endereco)
+          continue
+        }
+
+        // Geocodifica até achar um válido
+        let substituido = false
+        for (const cand of candidatos.slice(0, 5)) {
+          setGeocodingProgress(`Buscando substituto para ${pontoFlagado.ambiente}...`)
+          const res = await fetch('/api/geocode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ endereco: cand.endereco, cidade: cand.cidade, uf: cand.uf })
+          })
+          const geo = await res.json()
+          if (geo?.lat) {
+            novosAcumulados[cand.cod_ponto] = { ...cand, lat: geo.lat, lng: geo.lng }
+            codsJaNaRota.add(cand.cod_ponto)
+            substituido = true
+            break
+          }
+          await new Promise(r => setTimeout(r, 1100))
+        }
+      }
+
+      const novaRota = otimizarRota(Object.values(novosAcumulados))
+      setRotaGerada(novaRota)
+      setLinkMaps(gerarLinkGoogleMaps(novaRota))
+      setOutliersMarkados(new Set())
+      setFeedbackEnviado(false)
+    } catch (err) {
+      alert('Erro ao gerar variação: ' + err.message)
+    }
+
+    setGerandoVariacao(false)
+    setGeocodingProgress(null)
   }
 
   const enviarFeedback = async () => {
@@ -396,7 +476,7 @@ export default function Home() {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             {etapa === 3 && (
-              <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
+              <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false); setCodsBloqueadosSessao(new Set()); setOutliersMarkados(new Set()) }}
                 style={{ fontSize: '12px', padding: '7px 14px', backgroundColor: '#fefce8', border: '1px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: '600', cursor: 'pointer' }}>
                 📋 Nova rota
               </button>
@@ -776,14 +856,19 @@ export default function Home() {
               {outliersMarkados.size > 0 && !feedbackEnviado && (
                 <div style={{ marginTop: '12px', padding: '14px', backgroundColor: '#fff5f5', border: '1px solid #fca5a5', borderRadius: '10px' }}>
                   <p style={{ fontSize: '12px', fontWeight: '600', color: '#dc2626', marginBottom: '4px' }}>
-                    🚩 {outliersMarkados.size} ponto{outliersMarkados.size > 1 ? 's' : ''} marcado{outliersMarkados.size > 1 ? 's' : ''} como outlier
+                    🚩 {outliersMarkados.size} ponto{outliersMarkados.size > 1 ? 's' : ''} marcado{outliersMarkados.size > 1 ? 's' : ''}
                   </p>
-                  <p style={{ fontSize: '11px', color: '#6b7280', marginBottom: '10px' }}>
-                    O sistema vai aprender o raio máximo aceitável para futuras rotas nesta cidade.
+                  <p style={{ fontSize: '11px', color: '#888888', marginBottom: '12px' }}>
+                    Gere uma variação substituindo estes pontos, ou ensine o sistema a evitá-los no futuro.
                   </p>
-                  <button onClick={enviarFeedback} style={{ width: '100%', padding: '9px', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>
-                    Confirmar e ensinar o sistema →
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button onClick={gerarVariacao} disabled={gerandoVariacao} style={{ flex: 1, padding: '9px', background: 'linear-gradient(135deg, #f97316, #ea580c)', border: 'none', borderRadius: '8px', color: 'white', fontSize: '12px', fontWeight: '700', cursor: gerandoVariacao ? 'not-allowed' : 'pointer', opacity: gerandoVariacao ? 0.6 : 1 }}>
+                      {gerandoVariacao ? (geocodingProgress || 'Gerando...') : '🔀 Gerar variação da rota'}
+                    </button>
+                    <button onClick={enviarFeedback} style={{ flex: 1, padding: '9px', backgroundColor: '#fff', border: '1px solid #fca5a5', borderRadius: '8px', color: '#dc2626', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                      🧠 Ensinar sistema
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -810,7 +895,7 @@ export default function Home() {
         )}
 
         {etapa === 3 && (
-          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false) }}
+          <button onClick={() => { setEtapa(1); setMarcas([]); setRotaGerada([]); setCidadeSelecionada(''); setSelecao({}); setRotaSalva(false); setCodsBloqueadosSessao(new Set()); setOutliersMarkados(new Set()) }}
             style={{ color: '#888888', background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', padding: '16px 0', display: 'block', width: '100%', textAlign: 'center' }}>
             + Nova rota do zero
           </button>
